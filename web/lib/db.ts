@@ -3,8 +3,10 @@
 // Swap to Postgres in production with: DATABASE_URL=postgres://...
 
 import fs from 'fs';
+import path from 'path';
 
-const FILE = process.env.DB_FILE || '/tmp/sounddrop.json';
+const FILE =
+  process.env.DB_FILE || path.join(process.cwd(), 'data', 'sounddrop.json');
 
 export type Artist = {
   user_id: string;
@@ -44,8 +46,12 @@ export type AuditEvent = {
 type DbShape = { artists: Artist[]; tracks: Track[]; audit: AuditEvent[] };
 
 function readAll(): DbShape {
-  if (!fs.existsSync(FILE)) return { artists: [], tracks: [], audit: [] };
-  const raw = JSON.parse(fs.readFileSync(FILE, 'utf8')) as Partial<DbShape>;
+  if (!fs.existsSync(/* turbopackIgnore: true */ FILE)) {
+    return { artists: [], tracks: [], audit: [] };
+  }
+  const raw = JSON.parse(
+    fs.readFileSync(/* turbopackIgnore: true */ FILE, 'utf8'),
+  ) as Partial<DbShape>;
   return {
     artists: raw.artists || [],
     tracks: raw.tracks || [],
@@ -54,7 +60,8 @@ function readAll(): DbShape {
 }
 
 function writeAll(data: DbShape) {
-  fs.writeFileSync(FILE, JSON.stringify(data, null, 2));
+  fs.mkdirSync(/* turbopackIgnore: true */ path.dirname(FILE), { recursive: true });
+  fs.writeFileSync(/* turbopackIgnore: true */ FILE, JSON.stringify(data, null, 2));
 }
 
 export async function upsertArtist(a: Artist) {

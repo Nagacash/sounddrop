@@ -7,7 +7,7 @@
     "dev": "COPYFILE_DISABLE=1 next dev --webpack",
     "dev:turbo": "node scripts/ensure-local-next.mjs && COPYFILE_DISABLE=1 next dev --turbopack",
     "prebuild": "node scripts/ensure-local-next.mjs",
-    "build": "COPYFILE_DISABLE=1 next build",
+    "build": "COPYFILE_DISABLE=1 next build --turbopack",
     "start": "next start",
     "lint": "eslint"
   },

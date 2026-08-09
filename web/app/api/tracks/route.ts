@@ -84,6 +84,9 @@ export async function POST(req: NextRequest) {
     const status = problems.includes('signature_invalid') ? 401 : 403;
     return NextResponse.json({ error: problems.join(', '), problems }, { status });
   }
+  if (!realCid) {
+    return NextResponse.json({ error: 'cid_missing', problems: ['cid_missing'] }, { status: 403 });
+  }
 
   const fingerprintResult = await checkAudioFingerprint(
     Buffer.from(audioBuffer),

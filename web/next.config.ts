@@ -5,6 +5,8 @@ import type { NextConfig } from "next";
 const webpackCacheDirectory = path.join(os.tmpdir(), "sounddrop-webpack-cache");
 
 const nextConfig: NextConfig = {
+  // Allow Next 16 default Turbopack builds alongside the webpack() hook used by `next dev --webpack`.
+  turbopack: {},
   images: {
     remotePatterns: [
       {
