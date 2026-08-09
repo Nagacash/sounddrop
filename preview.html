@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>SoundDrop — urban music, artist-owned</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background:#0a0a0a; color:#e7e7ea; font-family: Arial, Helvetica, sans-serif; -webkit-font-smoothing: antialiased; }
+  a { color: inherit; text-decoration: none; }
+  .app { display:grid; grid-template-columns:220px 1fr; min-height:100vh; }
+  .side { border-right:1px solid #1c1c20; padding:16px 14px; position:sticky; top:0; height:100vh; overflow-y:auto; }
+  .logo { font-weight:800; font-size:20px; color:#1ed760; margin-bottom:18px; letter-spacing:0.5px; }
+  .lbl { font-size:11px; letter-spacing:1px; color:#6a6a72; margin:14px 0 6px; }
+  .nav a { display:block; padding:7px 10px; border-radius:6px; font-size:14px; color:#b8b8c0; }
+  .nav a.active { background:#1a1a1f; color:#fff; font-weight:600; }
+  .promo { margin-top:20px; background:linear-gradient(135deg,#7c3aed22,#1ed76022); border:1px solid #23232a; border-radius:10px; padding:12px; }
+  .promo b { font-size:13px; } .promo p { font-size:11px; color:#8a8a96; margin:6px 0 8px; }
+  .promo a { display:inline-block; background:#1ed760; color:#0a0a0a; font-weight:700; border-radius:999px; padding:6px 14px; font-size:12px; }
+  .main { min-width:0; }
+  .top { position:sticky; top:0; z-index:5; display:flex; align-items:center; gap:14px; padding:12px 22px; border-bottom:1px solid #1c1c20; background:rgba(10,10,10,0.85); }
+  .top input { flex:1; max-width:420px; background:#141416; border:1px solid #23232a; border-radius:999px; padding:9px 16px; color:#e7e7ea; font-size:13px; outline:none; }
+  .top .up { font-size:13px; font-weight:700; }
+  .top .sign { background:#1ed760; color:#0a0a0a; border:0; border-radius:999px; padding:8px 16px; font-weight:700; font-size:13px; cursor:pointer; }
+  .hero { padding:28px 22px 8px; }
+  .hero .card { background:linear-gradient(120deg,#7c3aed,#ff5e3a); border-radius:14px; padding:32px 28px; color:#fff; }
+  .hero h1 { font-size:30px; margin:0; font-weight:800; }
+  .hero p { margin:8px 0 16px; opacity:0.92; font-size:15px; max-width:560px; }
+  .hero a { display:inline-block; background:#0a0a0a; color:#1ed760; font-weight:800; border-radius:999px; padding:10px 20px; font-size:14px; }
+  .chips { display:flex; gap:8px; flex-wrap:wrap; padding:18px 22px 4px; }
+  .chip { background:#141416; color:#b8b8c0; border:0; border-radius:999px; padding:7px 14px; font-size:13px; font-weight:700; cursor:pointer; }
+  .chip.on { background:#1ed760; color:#0a0a0a; }
+  .sec { padding:18px 22px 4px; }
+  .sec .hd { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:12px; }
+  .sec h2 { font-size:15px; font-weight:800; letter-spacing:0.5px; }
+  .sec .all { font-size:12px; color:#8a8a96; }
+  .songs { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:8px; }
+  .song { display:flex; gap:12px; align-items:center; padding:8px 10px; border-radius:8px; background:#141416; }
+  .song .n { width:34px; height:34px; border-radius:6px; background:#1ed760; display:grid; place-items:center; font-weight:800; font-size:13px; color:#0a0a0a; flex:0 0 auto; }
+  .song .t { font-weight:600; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .song .c { font-size:12px; color:#8a8a96; }
+  .vb { font-size:10px; font-weight:700; color:#0a0a0a; background:#1ed760; border-radius:999px; padding:2px 6px; margin-left:6px; }
+  .albs { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; }
+  .alb { background:#141416; border-radius:10px; overflow:hidden; }
+  .alb .art { aspect-ratio:1/1; background:#1c1c22; border-top:3px solid #1ed760; }
+  .alb .meta { padding:10px; } .alb .t { font-weight:600; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .alb .s { font-size:12px; color:#8a8a96; }
+  .accts { display:flex; gap:12px; overflow-x:auto; padding-bottom:4px; }
+  .acct { flex:0 0 200px; background:#141416; border-radius:10px; padding:14px; text-align:center; }
+  .acct .av { width:56px; height:56px; border-radius:50%; background:linear-gradient(135deg,#1ed760,#0a84ff); margin:0 auto 10px; }
+  .acct .nm { font-weight:700; font-size:14px; } .acct button { margin-top:10px; background:transparent; border:1px solid #3a3a44; color:#e7e7ea; border-radius:999px; padding:5px 16px; font-size:12px; font-weight:700; cursor:pointer; }
+  footer { border-top:1px solid #1c1c20; margin-top:24px; padding:20px 22px; font-size:12px; color:#6a6a72; display:flex; gap:18px; flex-wrap:wrap; }
+
+  /* Modal */
+  .backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.6); display:none; align-items:center; justify-content:center; z-index:50; }
+  .backdrop.open { display:flex; }
+  .modal { background:#141416; border:1px solid #23232a; border-radius:14px; padding:24px; width:340px; }
+  .modal h3 { font-size:18px; margin-bottom:4px; }
+  .modal p { font-size:12px; color:#8a8a96; margin-bottom:16px; }
+  .oauth { display:block; width:100%; text-align:center; background:#1c1c22; color:#e7e7ea; border:1px solid #2c2c34; border-radius:8px; padding:10px; margin-bottom:8px; font-weight:600; cursor:pointer; }
+  .oauth.cb { background:#7c3aed; border-color:#7c3aed; }
+  .field { width:100%; background:#0a0a0a; border:1px solid #2c2c34; border-radius:8px; padding:10px; color:#e7e7ea; margin-bottom:8px; font-size:13px; outline:none; }
+  .submit { width:100%; background:#1ed760; color:#0a0a0a; border:0; border-radius:8px; padding:11px; font-weight:700; cursor:pointer; margin-top:6px; }
+  .close { float:right; background:transparent; border:0; color:#8a8a96; font-size:18px; cursor:pointer; }
+  .toast { position:fixed; bottom:18px; left:50%; transform:translateX(-50%); background:#1ed760; color:#0a0a0a; font-weight:700; padding:10px 18px; border-radius:999px; font-size:13px; opacity:0; transition:opacity .2s; pointer-events:none; }
+  .toast.show { opacity:1; }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="logo">SOUNDDROP</div>
+    <div class="lbl">BROWSE</div>
+    <nav class="nav">
+      <a class="active" href="#" data-nav>Discover</a>
+      <a href="#" data-nav>Charts</a>
+      <a href="#" data-nav>Playlists</a>
+      <a href="#" data-nav>Feed</a>
+      <a href="#" data-nav>My Library</a>
+    </nav>
+    <div class="lbl">ORIGINALS</div>
+    <nav class="nav">
+      <a href="#" data-nav>SoundDrop World</a>
+      <a href="#" data-nav>Artist Guide</a>
+    </nav>
+    <div class="promo">
+      <b>Artist-owned audio</b>
+      <p>Every drop signed at source, verified at ingest.</p>
+      <a href="#" id="uploadLink">Upload</a>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="top">
+      <input id="search" placeholder="Search artists, songs, albums" />
+      <span class="up" id="upLink" style="cursor:pointer">UPLOAD</span>
+      <button class="sign" id="signBtn">Sign In</button>
+    </header>
+
+    <section class="hero">
+      <div class="card">
+        <h1>Urban music. Owned by the artist.</h1>
+        <p>Stream Afrobeats, drill, amapiano, Latin and hip-hop. Every track is signed by the artist and verified the moment it hits the server.</p>
+        <a href="#" id="heroUpload">Upload your music — FREE</a>
+      </div>
+    </section>
+
+    <div class="chips" id="chips"></div>
+
+    <section class="sec">
+      <div class="hd"><h2>TRENDING SONGS</h2><span class="all">VIEW ALL</span></div>
+      <div class="songs" id="trending"></div>
+    </section>
+
+    <section class="sec">
+      <div class="hd"><h2>TRENDING ALBUMS</h2><span class="all">VIEW ALL</span></div>
+      <div class="albs" id="albums"></div>
+    </section>
+
+    <section class="sec">
+      <div class="hd"><h2>ACCOUNTS FOR YOU</h2><span class="all">VIEW ALL</span></div>
+      <div class="accts" id="accounts"></div>
+    </section>
+
+    <section class="sec">
+      <div class="hd"><h2>RECENTLY ADDED</h2><span class="all">VIEW ALL</span></div>
+      <div class="songs" id="recent"></div>
+    </section>
+
+    <footer>
+      <span>ABOUT</span><span>HELP</span><span>CREATOR APP</span><span>PRIVACY</span><span>TERMS</span><span>REPORT A VULNERABILITY</span>
+    </footer>
+  </div>
+</div>
+
+<!-- Sign In / Sign Up modal -->
+<div class="backdrop" id="modal">
+  <div class="modal">
+    <button class="close" id="closeModal">&times;</button>
+    <h3 id="modalTitle">Sign in to SoundDrop</h3>
+    <p id="modalSub">Artist-owned audio. Your keys never leave your device.</p>
+    <button class="oauth cb" id="oauthClerk">Continue with Clerk</button>
+    <button class="oauth" id="oauthGoogle">Continue with Google</button>
+    <input class="field" id="email" placeholder="Email" />
+    <input class="field" id="pass" type="password" placeholder="Password" />
+    <button class="submit" id="submit">Sign in</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const GENRES = ['All','Afrosounds','Hip-Hop/Rap','Drill','Amapiano','Latin','Caribbean','R&B','Gospel','Pop'];
+  // sample data
+  const songs = [
+    {t:'No Easy (Remix)', cid:'bvrk9jqejqchrhllrcu8fn', a:'ShortLord x DopeNation', g:'Afrosounds'},
+    {t:'ITALAWA', cid:'bz9k2mqfpq7xwspelgvki8', a:'Zlatan', g:'Afrosounds'},
+    {t:'With You (Remix)', cid:'bafkqqsign3kdjf9sldk2', a:'Ema Onigah', g:'R&B'},
+    {t:'CLAAT!', cid:'bxp9kd02kd0slslqkskd1', a:'Fireboy DML & Masicka', g:'Caribbean'},
+    {t:'THAT GIRL!', cid:'bxk2mx01kd9sldk2kdkd3', a:'Darkoo x Asake', g:'Afrosounds'},
+  ];
+  const albums = [
+    {t:'44 ME', a:'Juju', g:'Hip-Hop/Rap'},
+    {t:'Lounge Musik', a:'Pashanim', g:'Hip-Hop/Rap'},
+    {t:'ICEMAN', a:'Drake', g:'Hip-Hop/Rap'},
+    {t:'Junges Blut', a:'Mucco', g:'Drill'},
+    {t:'GREAT FAITH', a:'Ayodele Yomi', g:'Gospel'},
+  ];
+  const accounts = ['SoundDrop Africa','SoundDrop Hip-Hop','SoundDrop R&B','SoundDrop Latin','SoundDrop Amapiano'];
+  const recent = [
+    {t:'Stay ft Sicka Juvenile', cid:'bxp9kd02kd0slslqkskd6', a:'Ben Hail', g:'Hip-Hop/Rap'},
+    {t:'The Intense Mix 08', cid:'bxp9kd02kd0slslqkskd7', a:'DJs Vibe', g:'Afrosounds'},
+    {t:'Something Coming', cid:'bxp9kd02kd0slslqkskd8', a:'Khally Bobby', g:'Drill'},
+    {t:'Mélo', cid:'bxp9kd02kd0slslqkskd9', a:'Fresnel la melo', g:'Latin'},
+  ];
+
+  let activeGenre = 'All';
+
+  function vb(){ return '<span class="vb">VERIFIED</span>'; }
+  function songCard(s, n){
+    return `<div class="song"><div class="n">${n}</div><div><div class="t">${s.t} ${vb()}</div><div class="c">${s.a} · CID ${s.cid.slice(0,14)}…</div></div></div>`;
+  }
+  function albumCard(a){
+    return `<div class="alb"><div class="art"></div><div class="meta"><div class="t">${a.t}</div><div class="s">Album · ${a.a}</div></div></div>`;
+  }
+  function acctCard(name){
+    return `<div class="acct"><div class="av"></div><div class="nm">${name}</div><button>→ Follow</button></div>`;
+  }
+
+  function render(){
+    const filt = g => activeGenre==='All' || g===activeGenre;
+    document.getElementById('trending').innerHTML = songs.filter(s=>filt(s.g)).map((s,i)=>songCard(s,i+1)).join('') || '<p style="color:#8a8a96">No tracks in this genre yet.</p>';
+    document.getElementById('albums').innerHTML = albums.filter(a=>filt(a.g)).map(albumCard).join('') || '<p style="color:#8a8a96">No albums in this genre yet.</p>';
+    document.getElementById('recent').innerHTML = recent.filter(s=>filt(s.g)).map((s,i)=>songCard(s,i+1)).join('') || '<p style="color:#8a8a96">Nothing here yet.</p>';
+    document.getElementById('accounts').innerHTML = accounts.map(acctCard).join('');
+  }
+
+  // chips
+  const chipWrap = document.getElementById('chips');
+  GENRES.forEach(g=>{
+    const b=document.createElement('button');
+    b.className='chip'+(g==='All'?' on':'');
+    b.textContent=g;
+    b.onclick=()=>{ activeGenre=g; [...chipWrap.children].forEach(c=>c.classList.toggle('on',c.textContent===g)); render(); };
+    chipWrap.appendChild(b);
+  });
+
+  // sidebar active state
+  document.querySelectorAll('[data-nav]').forEach(a=>{
+    a.onclick=(e)=>{ e.preventDefault(); document.querySelectorAll('[data-nav]').forEach(x=>x.classList.remove('active')); a.classList.add('active'); };
+  });
+
+  // modal
+  const modal=document.getElementById('modal');
+  function openModal(title,sub){ document.getElementById('modalTitle').textContent=title; document.getElementById('modalSub').textContent=sub; modal.classList.add('open'); }
+  function closeModal(){ modal.classList.remove('open'); }
+  document.getElementById('signBtn').onclick=()=>openModal('Sign in to SoundDrop','Artist-owned audio. Your keys never leave your device.');
+  document.getElementById('upLink').onclick=()=>openModal('Create your artist account','Generate your Ed25519 keypair and start uploading signed drops.');
+  document.getElementById('heroUpload').onclick=(e)=>{e.preventDefault();openModal('Create your artist account','Generate your Ed25519 keypair and start uploading signed drops.');};
+  document.getElementById('uploadLink').onclick=(e)=>{e.preventDefault();openModal('Create your artist account','Generate your Ed25519 keypair and start uploading signed drops.');};
+  document.getElementById('closeModal').onclick=closeModal;
+  modal.onclick=(e)=>{ if(e.target===modal) closeModal(); };
+
+  function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1600); }
+
+  document.getElementById('oauthClerk').onclick=()=>toast('OAuth → Clerk (connect real keys to enable)');
+  document.getElementById('oauthGoogle').onclick=()=>toast('OAuth → Google (connect to enable)');
+  document.getElementById('submit').onclick=()=>{
+    const email=document.getElementById('email').value.trim();
+    if(!email){ toast('Enter an email'); return; }
+    toast('Signed in as '+email);
+    document.getElementById('signBtn').textContent='Account';
+    closeModal();
+  };
+
+  // search (filters visible song/album/account text)
+  document.getElementById('search').oninput=(e)=>{
+    const q=e.target.value.toLowerCase();
+    const match=s=>(s.t.toLowerCase().includes(q)||s.a.toLowerCase().includes(q));
+    document.getElementById('trending').innerHTML = songs.filter(s=>match(s)).map((s,i)=>songCard(s,i+1)).join('') || '<p style="color:#8a8a96">No matches.</p>';
+    document.getElementById('albums').innerHTML = albums.filter(a=>match(a)).map(albumCard).join('') || '';
+  };
+
+  render();
+</script>
+</body>
+</html>
