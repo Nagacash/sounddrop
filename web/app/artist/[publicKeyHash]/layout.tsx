@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { getArtistByHash } from '@/lib/mockData';
+import { getPublicArtist } from '@/lib/publicCatalog';
 import { artistShareUrl } from '@/lib/utils';
 
 type Props = {
@@ -9,10 +9,13 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { publicKeyHash } = await params;
-  const artist = getArtistByHash(publicKeyHash);
+  const artist = await getPublicArtist(publicKeyHash);
   if (!artist) return { title: 'Artist — SoundDrop' };
 
-  const url = artistShareUrl(publicKeyHash, process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000');
+  const url = artistShareUrl(
+    publicKeyHash,
+    process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
+  );
 
   return {
     title: `${artist.displayName} | SoundDrop`,

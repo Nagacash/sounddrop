@@ -23,6 +23,7 @@ export default function ArtistSetupPage() {
   const [stage, setStage] = useState('');
   const [policyAccepted, setPolicyAccepted] = useState(false);
   const [displayName, setDisplayName] = useState('');
+  const [profileHash, setProfileHash] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
   async function ensureKeys() {
@@ -40,7 +41,8 @@ export default function ArtistSetupPage() {
     return { pk, pb };
   }
 
-  async function register(quiet = false): Promise<boolean> {
+  async function register(opts?: { quiet?: boolean }): Promise<boolean> {
+    const quiet = opts?.quiet === true;
     const { pb } = await ensureKeys();
     if (!quiet) setStatus('[ REGISTERING PUBLIC KEY… ]');
     const res = await fetch('/api/artists', {
@@ -57,16 +59,9 @@ export default function ArtistSetupPage() {
       setStatus(`[ FAILED ] ${JSON.stringify(data)}`);
       return false;
     }
+    if (typeof data.publicKeyHash === 'string') setProfileHash(data.publicKeyHash);
     if (!quiet) setStatus('[ PUBLIC KEY REGISTERED ]');
     return true;
-  }
-
-  function handleRegisterClick() {
-    void register(false);
-  }
-
-  function handleUploadClick() {
-    void upload();
   }
 
   async function upload() {
@@ -88,7 +83,7 @@ export default function ArtistSetupPage() {
 
     const { pk, pb } = await ensureKeys();
     setStage('[ REGISTERING ARTIST ]');
-    const registered = await register(true);
+    const registered = await register({ quiet: true });
     if (!registered) {
       setStage('');
       return;
@@ -119,11 +114,20 @@ export default function ArtistSetupPage() {
     const data = await res.json();
     setStage('');
     if (res.ok) {
+      if (typeof data.publicKeyHash === 'string') setProfileHash(data.publicKeyHash);
       const warn = data.warning ? ` · ${data.warning}` : '';
       setStatus(`[ TRACK INGESTED ] CID ${cid.slice(0, 24)}…${warn}`);
     } else {
       setStatus(`[ REJECTED ] ${JSON.stringify(data)}`);
     }
+  }
+
+  function handleRegisterClick() {
+    void register();
+  }
+
+  function handleUploadClick() {
+    void upload();
   }
 
   if (!isSignedIn && !mock) {
@@ -205,6 +209,15 @@ export default function ArtistSetupPage() {
           aria-live="polite"
         >
           {status}
+        </p>
+      )}
+
+      {profileHash && (
+        <p className="font-telemetry mt-4 text-[11px] text-sd-muted">
+          [ SPACE ]{' '}
+          <Link href={`/artist/${profileHash}`} className="text-sd-accent underline-offset-2 hover:underline">
+            /artist/{profileHash.slice(0, 12)}…
+          </Link>
         </p>
       )}
     </main>

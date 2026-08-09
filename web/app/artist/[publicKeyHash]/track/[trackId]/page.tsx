@@ -1,19 +1,17 @@
-'use client';
-
 import Link from 'next/link';
-import { notFound, useParams } from 'next/navigation';
-import { getArtistByHash, getTrackByArtistAndId } from '@/lib/mockData';
+import { notFound } from 'next/navigation';
+import { getPublicTrack } from '@/lib/publicCatalog';
 import MusicPlayer from '@/components/MusicPlayer';
 import ShareButton from '@/components/ShareButton';
 
-export default function TrackPage() {
-  const params = useParams();
-  const publicKeyHash = typeof params.publicKeyHash === 'string' ? params.publicKeyHash : '';
-  const trackId = typeof params.trackId === 'string' ? params.trackId : '';
-  const artist = getArtistByHash(publicKeyHash);
-  const track = getTrackByArtistAndId(publicKeyHash, trackId);
+type Props = { params: Promise<{ publicKeyHash: string; trackId: string }> };
 
-  if (!artist || !track) notFound();
+export default async function TrackPage({ params }: Props) {
+  const { publicKeyHash, trackId } = await params;
+  const hit = await getPublicTrack(publicKeyHash, trackId);
+  if (!hit) notFound();
+
+  const { artist, track } = hit;
 
   return (
     <main className="min-h-[100dvh] bg-sd-bg px-5 pb-28 pt-14 sm:px-8">

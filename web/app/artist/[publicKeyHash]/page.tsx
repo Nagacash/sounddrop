@@ -1,14 +1,13 @@
-'use client';
-
-import { notFound, useParams } from 'next/navigation';
-import { getArtistByHash } from '@/lib/mockData';
+import { notFound } from 'next/navigation';
+import { getPublicArtist } from '@/lib/publicCatalog';
 import ArtistProfile from '@/components/ArtistProfile';
 import ArtistTrackList from '@/components/ArtistTrackList';
 
-export default function ArtistSpacePage() {
-  const params = useParams();
-  const publicKeyHash = typeof params.publicKeyHash === 'string' ? params.publicKeyHash : '';
-  const artist = getArtistByHash(publicKeyHash);
+type Props = { params: Promise<{ publicKeyHash: string }> };
+
+export default async function ArtistSpacePage({ params }: Props) {
+  const { publicKeyHash } = await params;
+  const artist = await getPublicArtist(publicKeyHash);
 
   if (!artist) notFound();
 

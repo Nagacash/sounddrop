@@ -44,7 +44,15 @@ export async function POST(req: NextRequest) {
     public_key: publicKey,
     created_at: new Date().toISOString(),
   });
-  return NextResponse.json({ ok: true, artist, publicKeyHash: resolvedUserId });
+
+  let publicKeyHash: string;
+  try {
+    publicKeyHash = await hashPublicKey(publicKey);
+  } catch {
+    return NextResponse.json({ error: 'invalid publicKey' }, { status: 400 });
+  }
+
+  return NextResponse.json({ ok: true, artist, publicKeyHash });
 }
 
 export async function GET() {

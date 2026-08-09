@@ -1,21 +1,39 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { getAllArtists, searchArtists } from '@/lib/mockData';
 import { useUIStore } from '@/stores/uiStore';
+import type { Artist } from '@/stores/artistStore';
 
 export default function Home() {
   const [query, setQuery] = useState('');
+  const [artists, setArtists] = useState<Artist[]>([]);
+  const [loading, setLoading] = useState(true);
   const { addRecentSearch, recentSearches } = useUIStore();
 
-  const featured = useMemo(() => getAllArtists(), []);
-  const results = useMemo(() => {
+  useEffect(() => {
+    const controller = new AbortController();
     const q = query.trim();
-    if (!q) return featured;
-    return searchArtists(q);
-  }, [query, featured]);
+    setLoading(true);
+    const url = q
+      ? `/api/artists/public?q=${encodeURIComponent(q)}`
+      : '/api/artists/public';
+
+    fetch(url, { signal: controller.signal })
+      .then((res) => res.json())
+      .then((data) => {
+        setArtists(Array.isArray(data.artists) ? data.artists : []);
+      })
+      .catch((err) => {
+        if (err?.name !== 'AbortError') setArtists([]);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [query]);
 
   const onSearch = (value: string) => {
     setQuery(value);
@@ -52,7 +70,9 @@ export default function Home() {
             <dl className="grid grid-cols-2 gap-px bg-sd-border">
               <div className="bg-sd-surface p-3">
                 <dt className="text-[10px]">ARTISTS</dt>
-                <dd className="mt-1 text-lg text-sd-text">{featured.length.toString().padStart(2, '0')}</dd>
+                <dd className="mt-1 text-lg text-sd-text">
+                  {loading ? '—' : artists.length.toString().padStart(2, '0')}
+                </dd>
               </div>
               <div className="bg-sd-surface p-3">
                 <dt className="text-[10px]">PROTOCOL</dt>
@@ -80,7 +100,7 @@ export default function Home() {
           type="search"
           value={query}
           onChange={(e) => onSearch(e.target.value)}
-          placeholder="Search artists by name or bio…"
+          placeholder="Search artists by name…"
           className="sd-input max-w-xl"
         />
         {recentSearches.length > 0 && !query && (
@@ -98,7 +118,7 @@ export default function Home() {
         {query.trim() ? '[ SEARCH RESULTS ]' : '[ FEATURED ARTISTS ]'}
       </h2>
       <div className="grid gap-px bg-sd-border sm:grid-cols-2 lg:grid-cols-3">
-        {results.map((artist) => (
+        {artists.map((artist) => (
           <Link
             key={artist.publicKeyHash}
             href={`/artist/${artist.publicKeyHash}`}
@@ -127,10 +147,13 @@ export default function Home() {
           </Link>
         ))}
       </div>
-      {results.length === 0 && (
+      {!loading && artists.length === 0 && (
         <p className="font-telemetry mt-8 border border-sd-border p-6 text-[11px] text-sd-muted">
           [ NO MATCH ]
         </p>
+      )}
+      {loading && (
+        <p className="font-telemetry mt-8 text-[11px] text-sd-muted">[ INDEXING… ]</p>
       )}
     </main>
   );

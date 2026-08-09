@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { getArtistByHash, getTrackByArtistAndId } from '@/lib/mockData';
+import { getPublicTrack } from '@/lib/publicCatalog';
 import { formatPriceCents, trackShareUrl } from '@/lib/utils';
 
 type Props = {
@@ -9,10 +9,10 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { publicKeyHash, trackId } = await params;
-  const artist = getArtistByHash(publicKeyHash);
-  const track = getTrackByArtistAndId(publicKeyHash, trackId);
-  if (!artist || !track) return { title: 'Track — SoundDrop' };
+  const hit = await getPublicTrack(publicKeyHash, trackId);
+  if (!hit) return { title: 'Track — SoundDrop' };
 
+  const { artist, track } = hit;
   const origin = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
   const url = trackShareUrl(publicKeyHash, trackId, origin);
   const priceDesc = track.isFree

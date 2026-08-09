@@ -115,12 +115,14 @@ export async function POST(req: NextRequest) {
   }
 
   let artistId = userId!;
+  let publicKeyHash: string;
+  try {
+    publicKeyHash = await hashPublicKey(publicKey);
+  } catch {
+    return NextResponse.json({ error: 'invalid publicKey' }, { status: 400 });
+  }
   if (mock) {
-    try {
-      artistId = await hashPublicKey(publicKey);
-    } catch {
-      return NextResponse.json({ error: 'invalid publicKey' }, { status: 400 });
-    }
+    artistId = publicKeyHash;
   }
   const track = await insertTrack({
     id: realCid,
@@ -141,6 +143,7 @@ export async function POST(req: NextRequest) {
     trackId: track.id,
     ok: true,
     track,
+    publicKeyHash,
     warning: fingerprintResult.isDuplicate ? fingerprintResult.reason : undefined,
   });
 }
