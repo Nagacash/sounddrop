@@ -1,16 +1,13 @@
-// Data layer adapter. Uses Postgres (pg) when DATABASE_URL is set; otherwise
-// falls back to a JSON-file store so the app runs locally without a DB.
-// Swap to Postgres in production with: DATABASE_URL=postgres://...
+// Neon Postgres via Drizzle when DATABASE_URL is set.
+// Falls back to a JSON file store for offline/local without Neon.
 
 import fs from 'fs';
 import path from 'path';
-
-// On Vercel the deploy FS is read-only; only /tmp is writable (still ephemeral).
-const FILE =
-  process.env.DB_FILE ||
-  (process.env.VERCEL
-    ? '/tmp/sounddrop.json'
-    : path.join(process.cwd(), 'data', 'sounddrop.json'));
+import { desc, eq, isNotNull, isNull, sql } from 'drizzle-orm';
+import { neon } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-http';
+import * as schema from '@/lib/db/schema';
+import { artists, tracks, auditEvents } from '@/lib/db/schema';
 
 export type Artist = {
   user_id: string;
@@ -47,6 +44,76 @@ export type AuditEvent = {
   detail: string;
 };
 
+const FILE =
+  process.env.DB_FILE ||
+  (process.env.VERCEL
+    ? '/tmp/sounddrop.json'
+    : path.join(process.cwd(), 'data', 'sounddrop.json'));
+
+function useNeon() {
+  return Boolean(process.env.DATABASE_URL);
+}
+
+function getDb() {
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error('DATABASE_URL is not set');
+  const client = neon(url);
+  return drizzle(client, { schema });
+}
+
+function iso(d: Date | string | null | undefined): string {
+  if (!d) return new Date().toISOString();
+  return d instanceof Date ? d.toISOString() : d;
+}
+
+function isoOrNull(d: Date | string | null | undefined): string | null {
+  if (!d) return null;
+  return d instanceof Date ? d.toISOString() : d;
+}
+
+function mapArtist(row: typeof artists.$inferSelect): Artist {
+  return {
+    user_id: row.user_id,
+    email: row.email || '',
+    display_name: row.display_name || '',
+    public_key: row.public_key,
+    created_at: iso(row.created_at),
+  };
+}
+
+function mapTrack(row: typeof tracks.$inferSelect): Track {
+  return {
+    id: row.id,
+    artist_id: row.artist_id,
+    title: row.title || '',
+    name: row.name,
+    size: Number(row.size),
+    type: row.type,
+    cid: row.cid,
+    signature: row.signature,
+    public_key: row.public_key,
+    storage_url: row.storage_url,
+    created_at: iso(row.created_at),
+    removed_at: isoOrNull(row.removed_at),
+    removed_reason: row.removed_reason,
+  };
+}
+
+function mapAudit(row: typeof auditEvents.$inferSelect): AuditEvent {
+  return {
+    id: row.id,
+    at: iso(row.at),
+    admin_id: row.admin_id,
+    admin_email: row.admin_email,
+    action: row.action,
+    target_type: row.target_type as AuditEvent['target_type'],
+    target_id: row.target_id,
+    detail: row.detail,
+  };
+}
+
+/* ---------------- JSON fallback ---------------- */
+
 type DbShape = { artists: Artist[]; tracks: Track[]; audit: AuditEvent[] };
 
 function readAll(): DbShape {
@@ -68,110 +135,252 @@ function writeAll(data: DbShape) {
   fs.writeFileSync(/* turbopackIgnore: true */ FILE, JSON.stringify(data, null, 2));
 }
 
+/* ---------------- Public API ---------------- */
+
 export async function upsertArtist(a: Artist) {
-  const d = readAll();
-  const i = d.artists.findIndex((x) => x.user_id === a.user_id);
-  if (i >= 0) d.artists[i] = { ...d.artists[i], ...a };
-  else d.artists.push(a);
-  writeAll(d);
+  if (!useNeon()) {
+    const d = readAll();
+    const i = d.artists.findIndex((x) => x.user_id === a.user_id);
+    if (i >= 0) d.artists[i] = { ...d.artists[i], ...a };
+    else d.artists.push(a);
+    writeAll(d);
+    return a;
+  }
+
+  const db = getDb();
+  await db
+    .insert(artists)
+    .values({
+      user_id: a.user_id,
+      email: a.email || null,
+      display_name: a.display_name || null,
+      public_key: a.public_key,
+      created_at: new Date(a.created_at),
+    })
+    .onConflictDoUpdate({
+      target: artists.user_id,
+      set: {
+        email: a.email || null,
+        display_name: a.display_name || null,
+        public_key: a.public_key,
+      },
+    });
   return a;
 }
 
 export async function getArtist(userId: string): Promise<Artist | null> {
-  return readAll().artists.find((x) => x.user_id === userId) || null;
+  if (!useNeon()) {
+    return readAll().artists.find((x) => x.user_id === userId) || null;
+  }
+  const db = getDb();
+  const rows = await db.select().from(artists).where(eq(artists.user_id, userId)).limit(1);
+  return rows[0] ? mapArtist(rows[0]) : null;
 }
 
 export async function listArtists(): Promise<Artist[]> {
-  return readAll().artists.slice().sort((a, b) => b.created_at.localeCompare(a.created_at));
+  if (!useNeon()) {
+    return readAll().artists.slice().sort((a, b) => b.created_at.localeCompare(a.created_at));
+  }
+  const db = getDb();
+  const rows = await db.select().from(artists).orderBy(desc(artists.created_at));
+  return rows.map(mapArtist);
 }
 
 export async function deleteArtist(userId: string): Promise<boolean> {
-  const d = readAll();
-  const before = d.artists.length;
-  d.artists = d.artists.filter((a) => a.user_id !== userId);
-  d.tracks = d.tracks.filter((t) => t.artist_id !== userId);
-  writeAll(d);
-  return d.artists.length < before;
+  if (!useNeon()) {
+    const d = readAll();
+    const before = d.artists.length;
+    d.artists = d.artists.filter((a) => a.user_id !== userId);
+    d.tracks = d.tracks.filter((t) => t.artist_id !== userId);
+    writeAll(d);
+    return d.artists.length < before;
+  }
+  const db = getDb();
+  await db.delete(tracks).where(eq(tracks.artist_id, userId));
+  const deleted = await db.delete(artists).where(eq(artists.user_id, userId)).returning({
+    user_id: artists.user_id,
+  });
+  return deleted.length > 0;
 }
 
 export async function insertTrack(t: Track) {
-  const d = readAll();
-  d.tracks.push(t);
-  writeAll(d);
+  if (!useNeon()) {
+    const d = readAll();
+    d.tracks.push(t);
+    writeAll(d);
+    return t;
+  }
+  const db = getDb();
+  await db.insert(tracks).values({
+    id: t.id,
+    artist_id: t.artist_id,
+    title: t.title || null,
+    name: t.name,
+    size: t.size,
+    type: t.type,
+    cid: t.cid,
+    signature: t.signature,
+    public_key: t.public_key,
+    storage_url: t.storage_url,
+    created_at: new Date(t.created_at),
+    removed_at: t.removed_at ? new Date(t.removed_at) : null,
+    removed_reason: t.removed_reason ?? null,
+  });
   return t;
 }
 
 export async function listTracks(opts?: { includeRemoved?: boolean }): Promise<Track[]> {
   const includeRemoved = opts?.includeRemoved ?? false;
-  return readAll()
-    .tracks.filter((t) => includeRemoved || !t.removed_at)
-    .slice()
-    .sort((a, b) => b.created_at.localeCompare(a.created_at));
+  if (!useNeon()) {
+    return readAll()
+      .tracks.filter((t) => includeRemoved || !t.removed_at)
+      .slice()
+      .sort((a, b) => b.created_at.localeCompare(a.created_at));
+  }
+  const db = getDb();
+  const rows = includeRemoved
+    ? await db.select().from(tracks).orderBy(desc(tracks.created_at))
+    : await db
+        .select()
+        .from(tracks)
+        .where(isNull(tracks.removed_at))
+        .orderBy(desc(tracks.created_at));
+  return rows.map(mapTrack);
 }
 
 export async function getTrack(id: string): Promise<Track | null> {
-  return readAll().tracks.find((x) => x.id === id) || null;
+  if (!useNeon()) {
+    return readAll().tracks.find((x) => x.id === id) || null;
+  }
+  const db = getDb();
+  const rows = await db.select().from(tracks).where(eq(tracks.id, id)).limit(1);
+  return rows[0] ? mapTrack(rows[0]) : null;
 }
 
 export async function removeTrack(id: string, reason: string): Promise<Track | null> {
-  const d = readAll();
-  const i = d.tracks.findIndex((t) => t.id === id);
-  if (i < 0) return null;
-  d.tracks[i] = {
-    ...d.tracks[i],
-    removed_at: new Date().toISOString(),
-    removed_reason: reason,
-  };
-  writeAll(d);
-  return d.tracks[i];
+  if (!useNeon()) {
+    const d = readAll();
+    const i = d.tracks.findIndex((t) => t.id === id);
+    if (i < 0) return null;
+    d.tracks[i] = {
+      ...d.tracks[i],
+      removed_at: new Date().toISOString(),
+      removed_reason: reason,
+    };
+    writeAll(d);
+    return d.tracks[i];
+  }
+  const db = getDb();
+  const rows = await db
+    .update(tracks)
+    .set({ removed_at: new Date(), removed_reason: reason })
+    .where(eq(tracks.id, id))
+    .returning();
+  return rows[0] ? mapTrack(rows[0]) : null;
 }
 
 export async function restoreTrack(id: string): Promise<Track | null> {
-  const d = readAll();
-  const i = d.tracks.findIndex((t) => t.id === id);
-  if (i < 0) return null;
-  d.tracks[i] = {
-    ...d.tracks[i],
-    removed_at: null,
-    removed_reason: null,
-  };
-  writeAll(d);
-  return d.tracks[i];
+  if (!useNeon()) {
+    const d = readAll();
+    const i = d.tracks.findIndex((t) => t.id === id);
+    if (i < 0) return null;
+    d.tracks[i] = {
+      ...d.tracks[i],
+      removed_at: null,
+      removed_reason: null,
+    };
+    writeAll(d);
+    return d.tracks[i];
+  }
+  const db = getDb();
+  const rows = await db
+    .update(tracks)
+    .set({ removed_at: null, removed_reason: null })
+    .where(eq(tracks.id, id))
+    .returning();
+  return rows[0] ? mapTrack(rows[0]) : null;
 }
 
 export async function hardDeleteTrack(id: string): Promise<boolean> {
-  const d = readAll();
-  const before = d.tracks.length;
-  d.tracks = d.tracks.filter((t) => t.id !== id);
-  writeAll(d);
-  return d.tracks.length < before;
+  if (!useNeon()) {
+    const d = readAll();
+    const before = d.tracks.length;
+    d.tracks = d.tracks.filter((t) => t.id !== id);
+    writeAll(d);
+    return d.tracks.length < before;
+  }
+  const db = getDb();
+  const deleted = await db.delete(tracks).where(eq(tracks.id, id)).returning({ id: tracks.id });
+  return deleted.length > 0;
 }
 
 export async function appendAudit(event: Omit<AuditEvent, 'id' | 'at'>): Promise<AuditEvent> {
-  const d = readAll();
   const row: AuditEvent = {
     id: `aud_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
     at: new Date().toISOString(),
     ...event,
   };
-  d.audit.unshift(row);
-  d.audit = d.audit.slice(0, 500);
-  writeAll(d);
+
+  if (!useNeon()) {
+    const d = readAll();
+    d.audit.unshift(row);
+    d.audit = d.audit.slice(0, 500);
+    writeAll(d);
+    return row;
+  }
+
+  const db = getDb();
+  await db.insert(auditEvents).values({
+    id: row.id,
+    at: new Date(row.at),
+    admin_id: row.admin_id,
+    admin_email: row.admin_email,
+    action: row.action,
+    target_type: row.target_type,
+    target_id: row.target_id,
+    detail: row.detail,
+  });
   return row;
 }
 
 export async function listAudit(limit = 100): Promise<AuditEvent[]> {
-  return readAll().audit.slice(0, limit);
+  if (!useNeon()) {
+    return readAll().audit.slice(0, limit);
+  }
+  const db = getDb();
+  const rows = await db.select().from(auditEvents).orderBy(desc(auditEvents.at)).limit(limit);
+  return rows.map(mapAudit);
 }
 
 export async function adminStats() {
-  const d = readAll();
-  const liveTracks = d.tracks.filter((t) => !t.removed_at);
-  const removedTracks = d.tracks.filter((t) => !!t.removed_at);
+  if (!useNeon()) {
+    const d = readAll();
+    const liveTracks = d.tracks.filter((t) => !t.removed_at);
+    const removedTracks = d.tracks.filter((t) => !!t.removed_at);
+    return {
+      artists: d.artists.length,
+      tracksLive: liveTracks.length,
+      tracksRemoved: removedTracks.length,
+      auditEvents: d.audit.length,
+    };
+  }
+
+  const db = getDb();
+  const [artistCount] = await db.select({ n: sql<number>`count(*)::int` }).from(artists);
+  const [live] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(tracks)
+    .where(isNull(tracks.removed_at));
+  const [removed] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(tracks)
+    .where(isNotNull(tracks.removed_at));
+  const [auditCount] = await db.select({ n: sql<number>`count(*)::int` }).from(auditEvents);
+
   return {
-    artists: d.artists.length,
-    tracksLive: liveTracks.length,
-    tracksRemoved: removedTracks.length,
-    auditEvents: d.audit.length,
+    artists: artistCount?.n ?? 0,
+    tracksLive: live?.n ?? 0,
+    tracksRemoved: removed?.n ?? 0,
+    auditEvents: auditCount?.n ?? 0,
   };
 }

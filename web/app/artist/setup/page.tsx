@@ -40,7 +40,7 @@ export default function ArtistSetupPage() {
     return { pk, pb };
   }
 
-  async function register(quiet = false) {
+  async function register(quiet = false): Promise<boolean> {
     const { pb } = await ensureKeys();
     if (!quiet) setStatus('[ REGISTERING PUBLIC KEY… ]');
     const res = await fetch('/api/artists', {
@@ -59,6 +59,14 @@ export default function ArtistSetupPage() {
     }
     if (!quiet) setStatus('[ PUBLIC KEY REGISTERED ]');
     return true;
+  }
+
+  function handleRegisterClick() {
+    void register(false);
+  }
+
+  function handleUploadClick() {
+    void upload();
   }
 
   async function upload() {
@@ -154,7 +162,7 @@ export default function ArtistSetupPage() {
         <p className="break-all text-xs text-sd-muted">
           PRIV (LOCAL): {privKey ? `${privKey.slice(0, 24)}…` : '—'}
         </p>
-        <button type="button" onClick={register} className="sd-btn mt-4">
+        <button type="button" onClick={handleRegisterClick} className="sd-btn mt-4">
           [ REGISTER PUBLIC KEY ]
         </button>
       </section>
@@ -179,7 +187,7 @@ export default function ArtistSetupPage() {
           accept="audio/mpeg,.mp3"
           className="font-telemetry mt-4 block w-full text-xs text-sd-muted file:mr-4 file:border file:border-sd-border file:bg-sd-bg file:px-3 file:py-2 file:text-[10px] file:uppercase file:tracking-widest file:text-sd-text"
         />
-        <button type="button" onClick={upload} className="sd-btn mt-4">
+        <button type="button" onClick={handleUploadClick} className="sd-btn mt-4">
           [ SIGN & UPLOAD ]
         </button>
         {stage && (
