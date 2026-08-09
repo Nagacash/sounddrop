@@ -1,17 +1,22 @@
 'use client';
 
 import Link from 'next/link';
-import { useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { generateKeypair, signMeta, computeCID } from '@/lib/crypto';
+import { generateKeypair, hashPublicKey, signMeta, computeCID } from '@/lib/crypto';
 import { isMvpMockModeClient } from '@/lib/mockMode';
 
 const POLICY_KEY = 'sd_policy_accepted_at';
+const PROFILE_HASH_KEY = 'sd_profile_hash';
 
 const initialPriv = typeof window !== 'undefined' ? localStorage.getItem('sd_priv') || '' : '';
 const initialPub = typeof window !== 'undefined' ? localStorage.getItem('sd_pub') || '' : '';
+const initialProfileHash =
+  typeof window !== 'undefined' ? localStorage.getItem(PROFILE_HASH_KEY) || '' : '';
 
 export default function ArtistSetupPage() {
+  const router = useRouter();
   const mock = isMvpMockModeClient();
   const clerk = useUser();
   const user = mock ? null : clerk.user ?? null;
@@ -23,8 +28,26 @@ export default function ArtistSetupPage() {
   const [stage, setStage] = useState('');
   const [policyAccepted, setPolicyAccepted] = useState(false);
   const [displayName, setDisplayName] = useState('');
-  const [profileHash, setProfileHash] = useState('');
+  const [profileHash, setProfileHash] = useState(initialProfileHash);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  function rememberProfileHash(hash: string) {
+    setProfileHash(hash);
+    localStorage.setItem(PROFILE_HASH_KEY, hash);
+  }
+
+  function goToSpace(hash: string) {
+    rememberProfileHash(hash);
+    router.push(`/artist/${hash}`);
+  }
+
+  useEffect(() => {
+    if (profileHash || !initialPub) return;
+    void hashPublicKey(initialPub)
+      .then((hash) => rememberProfileHash(hash))
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- hydrate once from local key
+  }, []);
 
   async function ensureKeys() {
     let pk = localStorage.getItem('sd_priv');
@@ -59,8 +82,15 @@ export default function ArtistSetupPage() {
       setStatus(`[ FAILED ] ${JSON.stringify(data)}`);
       return false;
     }
-    if (typeof data.publicKeyHash === 'string') setProfileHash(data.publicKeyHash);
-    if (!quiet) setStatus('[ PUBLIC KEY REGISTERED ]');
+    const hash = typeof data.publicKeyHash === 'string' ? data.publicKeyHash : '';
+    if (hash) rememberProfileHash(hash);
+    if (!quiet) {
+      setStatus('[ PUBLIC KEY REGISTERED — OPENING YOUR SPACE… ]');
+      if (hash) {
+        goToSpace(hash);
+        return true;
+      }
+    }
     return true;
   }
 
@@ -114,9 +144,15 @@ export default function ArtistSetupPage() {
     const data = await res.json();
     setStage('');
     if (res.ok) {
-      if (typeof data.publicKeyHash === 'string') setProfileHash(data.publicKeyHash);
+      const hash =
+        typeof data.publicKeyHash === 'string' ? data.publicKeyHash : profileHash;
+      if (hash) rememberProfileHash(hash);
       const warn = data.warning ? ` · ${data.warning}` : '';
       setStatus(`[ TRACK INGESTED ] CID ${cid.slice(0, 24)}…${warn}`);
+      if (hash) {
+        setStatus(`[ TRACK INGESTED — OPENING YOUR SPACE… ]${warn}`);
+        goToSpace(hash);
+      }
     } else {
       setStatus(`[ REJECTED ] ${JSON.stringify(data)}`);
     }
@@ -149,6 +185,20 @@ export default function ArtistSetupPage() {
           Content policy
         </Link>
       </p>
+
+      {profileHash && (
+        <div className="sd-panel mt-8 flex flex-wrap items-center justify-between gap-3 border border-sd-border p-5">
+          <div>
+            <p className="font-telemetry text-[11px] text-sd-muted">[ YOUR SPACE ]</p>
+            <p className="mt-1 break-all font-telemetry text-[11px] text-sd-text">
+              /artist/{profileHash}
+            </p>
+          </div>
+          <Link href={`/artist/${profileHash}`} className="sd-btn">
+            [ OPEN PROFILE ]
+          </Link>
+        </div>
+      )}
 
       <section className="sd-panel mt-8 border border-sd-border p-5">
         <h2 className="font-telemetry text-[11px] text-sd-muted">[ DISPLAY NAME ]</h2>
@@ -202,23 +252,24 @@ export default function ArtistSetupPage() {
       </section>
 
       {status && (
-        <p
-          className={`font-telemetry mt-6 border border-sd-border p-4 text-[11px] ${
+        <div
+          className={`mt-6 border border-sd-border p-4 ${
             status.includes('FAILED') || status.includes('REJECTED') ? 'text-sd-accent' : 'text-sd-status'
           }`}
           aria-live="polite"
         >
-          {status}
-        </p>
-      )}
-
-      {profileHash && (
-        <p className="font-telemetry mt-4 text-[11px] text-sd-muted">
-          [ SPACE ]{' '}
-          <Link href={`/artist/${profileHash}`} className="text-sd-accent underline-offset-2 hover:underline">
-            /artist/{profileHash.slice(0, 12)}…
-          </Link>
-        </p>
+          <p className="font-telemetry text-[11px]">{status}</p>
+          {profileHash &&
+            !status.includes('FAILED') &&
+            !status.includes('REJECTED') && (
+              <Link
+                href={`/artist/${profileHash}`}
+                className="sd-btn mt-4 inline-flex"
+              >
+                [ OPEN YOUR SPACE ]
+              </Link>
+            )}
+        </div>
       )}
     </main>
   );
