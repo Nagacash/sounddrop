@@ -20,6 +20,9 @@ export interface ArtistLinks {
 }
 
 export interface Artist {
+  /** Vanity path segment for /artist/{slug} */
+  slug: string;
+  /** Stable Ed25519 key fingerprint (also accepted in old URLs) */
   publicKeyHash: string;
   displayName: string;
   bio: string;

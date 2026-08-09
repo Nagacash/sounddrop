@@ -4,16 +4,16 @@ import { artistShareUrl } from '@/lib/utils';
 
 type Props = {
   children: React.ReactNode;
-  params: Promise<{ publicKeyHash: string }>;
+  params: Promise<{ slug: string }>;
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { publicKeyHash } = await params;
-  const artist = await getPublicArtist(publicKeyHash);
+  const { slug } = await params;
+  const artist = await getPublicArtist(slug);
   if (!artist) return { title: 'Artist — SoundDrop' };
 
   const url = artistShareUrl(
-    publicKeyHash,
+    artist.slug,
     process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
   );
 

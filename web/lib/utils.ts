@@ -22,12 +22,12 @@ export function appOrigin(origin?: string): string {
   return origin ?? (typeof window !== 'undefined' ? window.location.origin : '');
 }
 
-export function artistShareUrl(publicKeyHash: string, origin?: string): string {
-  return `${appOrigin(origin)}/artist/${publicKeyHash}`;
+export function artistShareUrl(slug: string, origin?: string): string {
+  return `${appOrigin(origin)}/artist/${slug}`;
 }
 
-export function trackShareUrl(publicKeyHash: string, trackId: string, origin?: string): string {
-  return `${appOrigin(origin)}/artist/${publicKeyHash}/track/${trackId}`;
+export function trackShareUrl(slug: string, trackId: string, origin?: string): string {
+  return `${appOrigin(origin)}/artist/${slug}/track/${trackId}`;
 }
 
 export async function shareOrCopy(opts: {

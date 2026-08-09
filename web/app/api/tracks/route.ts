@@ -4,6 +4,7 @@ import { createClerkClient } from '@clerk/backend';
 import { verifyIngest } from '@/lib/ingest';
 import { checkAudioFingerprint } from '@/lib/audd';
 import { getArtist, insertTrack, listTracks, upsertArtist } from '@/lib/db';
+import { storeAudio } from '@/lib/audioStorage';
 import { isMvpMockMode } from '@/lib/mockMode';
 import { hashPublicKey } from '@/lib/publicKeyHash';
 
@@ -124,6 +125,18 @@ export async function POST(req: NextRequest) {
   if (mock) {
     artistId = publicKeyHash;
   }
+
+  let storageUrl: string;
+  try {
+    storageUrl = await storeAudio(realCid, audioBuffer);
+  } catch (err) {
+    console.error('[tracks] audio store failed', err);
+    return NextResponse.json(
+      { error: 'audio_store_failed', detail: err instanceof Error ? err.message : 'unknown' },
+      { status: 500 },
+    );
+  }
+
   const track = await insertTrack({
     id: realCid,
     artist_id: artistId,
@@ -134,9 +147,11 @@ export async function POST(req: NextRequest) {
     cid: realCid,
     signature,
     public_key: publicKey,
-    storage_url: null,
+    storage_url: storageUrl,
     created_at: new Date().toISOString(),
   });
+
+  const artistRow = await getArtist(artistId);
 
   return NextResponse.json({
     success: true,
@@ -144,6 +159,7 @@ export async function POST(req: NextRequest) {
     ok: true,
     track,
     publicKeyHash,
+    slug: artistRow?.slug || publicKeyHash,
     warning: fingerprintResult.isDuplicate ? fingerprintResult.reason : undefined,
   });
 }

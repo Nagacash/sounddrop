@@ -4,17 +4,17 @@ import { formatPriceCents, trackShareUrl } from '@/lib/utils';
 
 type Props = {
   children: React.ReactNode;
-  params: Promise<{ publicKeyHash: string; trackId: string }>;
+  params: Promise<{ slug: string; trackId: string }>;
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { publicKeyHash, trackId } = await params;
-  const hit = await getPublicTrack(publicKeyHash, trackId);
+  const { slug, trackId } = await params;
+  const hit = await getPublicTrack(slug, trackId);
   if (!hit) return { title: 'Track — SoundDrop' };
 
   const { artist, track } = hit;
   const origin = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-  const url = trackShareUrl(publicKeyHash, trackId, origin);
+  const url = trackShareUrl(artist.slug, trackId, origin);
   const priceDesc = track.isFree
     ? 'Free download'
     : `From ${formatPriceCents(track.minPriceCents ?? 0)}`;

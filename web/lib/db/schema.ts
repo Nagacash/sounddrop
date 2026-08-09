@@ -6,13 +6,18 @@ import {
   timestamp,
 } from 'drizzle-orm/pg-core';
 
-export const artists = pgTable('artists', {
-  user_id: text('user_id').primaryKey(),
-  email: text('email'),
-  display_name: text('display_name'),
-  public_key: text('public_key').notNull(),
-  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-});
+export const artists = pgTable(
+  'artists',
+  {
+    user_id: text('user_id').primaryKey(),
+    email: text('email'),
+    display_name: text('display_name'),
+    slug: text('slug'),
+    public_key: text('public_key').notNull(),
+    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('idx_artists_slug').on(t.slug)],
+);
 
 export const tracks = pgTable(
   'tracks',

@@ -6,9 +6,12 @@ CREATE TABLE IF NOT EXISTS artists (
   user_id       TEXT PRIMARY KEY,           -- Clerk user id
   email         TEXT,
   display_name  TEXT,
+  slug          TEXT UNIQUE,               -- vanity URL: /artist/{slug}
   public_key    TEXT NOT NULL,             -- base64 SPKI, used to verify uploads
   created_at    TIMESTAMPTZ DEFAULT now()
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_artists_slug ON artists(slug);
 
 CREATE TABLE IF NOT EXISTS tracks (
   id            TEXT PRIMARY KEY,           -- = cid (content address)

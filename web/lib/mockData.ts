@@ -1,7 +1,8 @@
 import type { Artist, Track } from '@/stores/artistStore';
 
 export const mockArtists: Record<string, Artist> = {
-  'artist-001': {
+  'alex-luna': {
+    slug: 'alex-luna',
     publicKeyHash: 'artist-001',
     displayName: 'Alex Luna',
     bio: 'Electronic music producer from Berlin. Owner of my sound.',
@@ -52,7 +53,8 @@ export const mockArtists: Record<string, Artist> = {
       },
     ],
   },
-  'artist-002': {
+  'maya-beats': {
+    slug: 'maya-beats',
     publicKeyHash: 'artist-002',
     displayName: 'Maya Beats',
     bio: 'Hip-hop & soul. Independent. DM for collabs.',
@@ -91,7 +93,8 @@ export const mockArtists: Record<string, Artist> = {
       },
     ],
   },
-  'artist-003': {
+  'jordan-sky': {
+    slug: 'jordan-sky',
     publicKeyHash: 'artist-003',
     displayName: 'Jordan Sky',
     bio: 'Ambient & experimental. Creating the future.',
@@ -121,7 +124,12 @@ export const mockArtists: Record<string, Artist> = {
   },
 };
 
-export const getArtistByHash = (hash: string) => mockArtists[hash];
+export const getArtistByHash = (hash: string) => {
+  if (mockArtists[hash]) return mockArtists[hash];
+  return Object.values(mockArtists).find(
+    (a) => a.publicKeyHash === hash || a.slug === hash,
+  );
+};
 export const getAllArtists = () => Object.values(mockArtists);
 export const getTrackById = (id: string) => {
   for (const a of Object.values(mockArtists)) {
@@ -131,7 +139,7 @@ export const getTrackById = (id: string) => {
   return undefined;
 };
 export const getTrackByArtistAndId = (hash: string, id: string) =>
-  mockArtists[hash]?.tracks.find((t) => t.id === id);
+  getArtistByHash(hash)?.tracks.find((t) => t.id === id);
 export const getRecentTracks = (limit = 10): Track[] =>
   Object.values(mockArtists)
     .flatMap((a) => a.tracks)
@@ -141,5 +149,6 @@ export const searchArtists = (q: string) =>
   Object.values(mockArtists).filter(
     (a) =>
       a.displayName.toLowerCase().includes(q.toLowerCase()) ||
+      a.slug.toLowerCase().includes(q.toLowerCase()) ||
       a.bio.toLowerCase().includes(q.toLowerCase()),
   );

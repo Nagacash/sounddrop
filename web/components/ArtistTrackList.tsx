@@ -10,6 +10,7 @@ import type { Track } from '@/stores/artistStore';
 
 interface ArtistTrackListProps {
   tracks: Track[];
+  slug: string;
   publicKeyHash: string;
   artistName: string;
 }
@@ -21,6 +22,7 @@ function prefersReducedMotion() {
 
 export default function ArtistTrackList({
   tracks,
+  slug,
   publicKeyHash,
   artistName,
 }: ArtistTrackListProps) {
@@ -63,7 +65,7 @@ export default function ArtistTrackList({
           {tracks.map((track, index) => {
             const active = currentTrack?.id === track.id;
             const playing = active && isPlaying;
-            const shareUrl = trackShareUrl(publicKeyHash, track.id);
+            const shareUrl = trackShareUrl(slug || publicKeyHash, track.id);
 
             return (
               <div

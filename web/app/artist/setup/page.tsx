@@ -4,16 +4,16 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { generateKeypair, hashPublicKey, signMeta, computeCID } from '@/lib/crypto';
+import { generateKeypair, signMeta, computeCID } from '@/lib/crypto';
 import { isMvpMockModeClient } from '@/lib/mockMode';
 
 const POLICY_KEY = 'sd_policy_accepted_at';
-const PROFILE_HASH_KEY = 'sd_profile_hash';
+const PROFILE_SLUG_KEY = 'sd_profile_slug';
 
 const initialPriv = typeof window !== 'undefined' ? localStorage.getItem('sd_priv') || '' : '';
 const initialPub = typeof window !== 'undefined' ? localStorage.getItem('sd_pub') || '' : '';
-const initialProfileHash =
-  typeof window !== 'undefined' ? localStorage.getItem(PROFILE_HASH_KEY) || '' : '';
+const initialProfileSlug =
+  typeof window !== 'undefined' ? localStorage.getItem(PROFILE_SLUG_KEY) || '' : '';
 
 export default function ArtistSetupPage() {
   const router = useRouter();
@@ -28,26 +28,37 @@ export default function ArtistSetupPage() {
   const [stage, setStage] = useState('');
   const [policyAccepted, setPolicyAccepted] = useState(false);
   const [displayName, setDisplayName] = useState('');
-  const [profileHash, setProfileHash] = useState(initialProfileHash);
+  const [profileSlug, setProfileSlug] = useState(initialProfileSlug);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  function rememberProfileHash(hash: string) {
-    setProfileHash(hash);
-    localStorage.setItem(PROFILE_HASH_KEY, hash);
+  function rememberProfileSlug(slug: string) {
+    setProfileSlug(slug);
+    localStorage.setItem(PROFILE_SLUG_KEY, slug);
   }
 
-  function goToSpace(hash: string) {
-    rememberProfileHash(hash);
-    router.push(`/artist/${hash}`);
+  function goToSpace(slug: string) {
+    rememberProfileSlug(slug);
+    router.push(`/artist/${slug}`);
   }
 
   useEffect(() => {
-    if (profileHash || !initialPub) return;
-    void hashPublicKey(initialPub)
-      .then((hash) => rememberProfileHash(hash))
+    if (mock) {
+      if (!profileSlug) {
+        const legacy = localStorage.getItem('sd_profile_hash');
+        if (legacy) rememberProfileSlug(legacy);
+      }
+      return;
+    }
+    if (!isSignedIn) return;
+    void fetch('/api/artists')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        const slug = data?.artist?.slug;
+        if (typeof slug === 'string' && slug) rememberProfileSlug(slug);
+      })
       .catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- hydrate once from local key
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- hydrate once when signed in
+  }, [isSignedIn, mock]);
 
   async function ensureKeys() {
     let pk = localStorage.getItem('sd_priv');
@@ -82,12 +93,15 @@ export default function ArtistSetupPage() {
       setStatus(`[ FAILED ] ${JSON.stringify(data)}`);
       return false;
     }
-    const hash = typeof data.publicKeyHash === 'string' ? data.publicKeyHash : '';
-    if (hash) rememberProfileHash(hash);
+    const slug =
+      (typeof data.slug === 'string' && data.slug) ||
+      (typeof data.publicKeyHash === 'string' && data.publicKeyHash) ||
+      '';
+    if (slug) rememberProfileSlug(slug);
     if (!quiet) {
       setStatus('[ PUBLIC KEY REGISTERED — OPENING YOUR SPACE… ]');
-      if (hash) {
-        goToSpace(hash);
+      if (slug) {
+        goToSpace(slug);
         return true;
       }
     }
@@ -144,14 +158,16 @@ export default function ArtistSetupPage() {
     const data = await res.json();
     setStage('');
     if (res.ok) {
-      const hash =
-        typeof data.publicKeyHash === 'string' ? data.publicKeyHash : profileHash;
-      if (hash) rememberProfileHash(hash);
+      const slug =
+        (typeof data.slug === 'string' && data.slug) ||
+        (typeof data.publicKeyHash === 'string' && data.publicKeyHash) ||
+        profileSlug;
+      if (slug) rememberProfileSlug(slug);
       const warn = data.warning ? ` · ${data.warning}` : '';
       setStatus(`[ TRACK INGESTED ] CID ${cid.slice(0, 24)}…${warn}`);
-      if (hash) {
+      if (slug) {
         setStatus(`[ TRACK INGESTED — OPENING YOUR SPACE… ]${warn}`);
-        goToSpace(hash);
+        goToSpace(slug);
       }
     } else {
       setStatus(`[ REJECTED ] ${JSON.stringify(data)}`);
@@ -186,15 +202,15 @@ export default function ArtistSetupPage() {
         </Link>
       </p>
 
-      {profileHash && (
+      {profileSlug && (
         <div className="sd-panel mt-8 flex flex-wrap items-center justify-between gap-3 border border-sd-border p-5">
           <div>
             <p className="font-telemetry text-[11px] text-sd-muted">[ YOUR SPACE ]</p>
             <p className="mt-1 break-all font-telemetry text-[11px] text-sd-text">
-              /artist/{profileHash}
+              /artist/{profileSlug}
             </p>
           </div>
-          <Link href={`/artist/${profileHash}`} className="sd-btn">
+          <Link href={`/artist/${profileSlug}`} className="sd-btn">
             [ OPEN PROFILE ]
           </Link>
         </div>
@@ -259,11 +275,11 @@ export default function ArtistSetupPage() {
           aria-live="polite"
         >
           <p className="font-telemetry text-[11px]">{status}</p>
-          {profileHash &&
+          {profileSlug &&
             !status.includes('FAILED') &&
             !status.includes('REJECTED') && (
               <Link
-                href={`/artist/${profileHash}`}
+                href={`/artist/${profileSlug}`}
                 className="sd-btn mt-4 inline-flex"
               >
                 [ OPEN YOUR SPACE ]

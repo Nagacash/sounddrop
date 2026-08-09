@@ -8,11 +8,14 @@ import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
 import * as schema from '@/lib/db/schema';
 import { artists, tracks, auditEvents } from '@/lib/db/schema';
+import { artistSlug } from '@/lib/slug';
+import { hashPublicKey } from '@/lib/publicKeyHash';
 
 export type Artist = {
   user_id: string;
   email: string;
   display_name: string;
+  slug: string;
   public_key: string;
   created_at: string;
 };
@@ -76,9 +79,42 @@ function mapArtist(row: typeof artists.$inferSelect): Artist {
     user_id: row.user_id,
     email: row.email || '',
     display_name: row.display_name || '',
+    slug: row.slug || '',
     public_key: row.public_key,
     created_at: iso(row.created_at),
   };
+}
+
+async function resolveSlug(
+  userId: string,
+  displayName: string,
+  publicKey: string,
+  existingSlug?: string | null,
+): Promise<string> {
+  let publicKeyHash: string;
+  try {
+    publicKeyHash = await hashPublicKey(publicKey);
+  } catch {
+    publicKeyHash = userId.replace(/[^a-z0-9]/gi, '').slice(0, 12) || 'artist';
+  }
+
+  // Keep a stable slug when the artist already has one and name didn't force a change.
+  if (existingSlug) return existingSlug;
+
+  const taken = new Set<string>();
+  if (!useNeon()) {
+    for (const a of readAll().artists) {
+      if (a.user_id !== userId && a.slug) taken.add(a.slug);
+    }
+  } else {
+    const db = getDb();
+    const rows = await db.select({ slug: artists.slug, user_id: artists.user_id }).from(artists);
+    for (const r of rows) {
+      if (r.user_id !== userId && r.slug) taken.add(r.slug);
+    }
+  }
+
+  return artistSlug(displayName || 'Artist', publicKeyHash, taken);
 }
 
 function mapTrack(row: typeof tracks.$inferSelect): Track {
@@ -137,35 +173,43 @@ function writeAll(data: DbShape) {
 
 /* ---------------- Public API ---------------- */
 
-export async function upsertArtist(a: Artist) {
+export async function upsertArtist(a: Omit<Artist, 'slug'> & { slug?: string }) {
+  const existing = await getArtist(a.user_id);
+  const slug =
+    a.slug ||
+    (await resolveSlug(a.user_id, a.display_name, a.public_key, existing?.slug || null));
+  const row: Artist = { ...a, slug };
+
   if (!useNeon()) {
     const d = readAll();
-    const i = d.artists.findIndex((x) => x.user_id === a.user_id);
-    if (i >= 0) d.artists[i] = { ...d.artists[i], ...a };
-    else d.artists.push(a);
+    const i = d.artists.findIndex((x) => x.user_id === row.user_id);
+    if (i >= 0) d.artists[i] = { ...d.artists[i], ...row };
+    else d.artists.push(row);
     writeAll(d);
-    return a;
+    return row;
   }
 
   const db = getDb();
   await db
     .insert(artists)
     .values({
-      user_id: a.user_id,
-      email: a.email || null,
-      display_name: a.display_name || null,
-      public_key: a.public_key,
-      created_at: new Date(a.created_at),
+      user_id: row.user_id,
+      email: row.email || null,
+      display_name: row.display_name || null,
+      slug: row.slug,
+      public_key: row.public_key,
+      created_at: new Date(row.created_at),
     })
     .onConflictDoUpdate({
       target: artists.user_id,
       set: {
-        email: a.email || null,
-        display_name: a.display_name || null,
-        public_key: a.public_key,
+        email: row.email || null,
+        display_name: row.display_name || null,
+        slug: row.slug,
+        public_key: row.public_key,
       },
     });
-  return a;
+  return row;
 }
 
 export async function getArtist(userId: string): Promise<Artist | null> {
@@ -206,26 +250,44 @@ export async function deleteArtist(userId: string): Promise<boolean> {
 export async function insertTrack(t: Track) {
   if (!useNeon()) {
     const d = readAll();
-    d.tracks.push(t);
+    const i = d.tracks.findIndex((x) => x.id === t.id);
+    if (i >= 0) d.tracks[i] = { ...d.tracks[i], ...t };
+    else d.tracks.push(t);
     writeAll(d);
     return t;
   }
   const db = getDb();
-  await db.insert(tracks).values({
-    id: t.id,
-    artist_id: t.artist_id,
-    title: t.title || null,
-    name: t.name,
-    size: t.size,
-    type: t.type,
-    cid: t.cid,
-    signature: t.signature,
-    public_key: t.public_key,
-    storage_url: t.storage_url,
-    created_at: new Date(t.created_at),
-    removed_at: t.removed_at ? new Date(t.removed_at) : null,
-    removed_reason: t.removed_reason ?? null,
-  });
+  await db
+    .insert(tracks)
+    .values({
+      id: t.id,
+      artist_id: t.artist_id,
+      title: t.title || null,
+      name: t.name,
+      size: t.size,
+      type: t.type,
+      cid: t.cid,
+      signature: t.signature,
+      public_key: t.public_key,
+      storage_url: t.storage_url,
+      created_at: new Date(t.created_at),
+      removed_at: t.removed_at ? new Date(t.removed_at) : null,
+      removed_reason: t.removed_reason ?? null,
+    })
+    .onConflictDoUpdate({
+      target: tracks.id,
+      set: {
+        title: t.title || null,
+        name: t.name,
+        size: t.size,
+        type: t.type,
+        signature: t.signature,
+        public_key: t.public_key,
+        storage_url: t.storage_url,
+        removed_at: null,
+        removed_reason: null,
+      },
+    });
   return t;
 }
 

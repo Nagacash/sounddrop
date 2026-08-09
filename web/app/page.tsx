@@ -120,8 +120,8 @@ export default function Home() {
       <div className="grid gap-px bg-sd-border sm:grid-cols-2 lg:grid-cols-3">
         {artists.map((artist) => (
           <Link
-            key={artist.publicKeyHash}
-            href={`/artist/${artist.publicKeyHash}`}
+            key={artist.slug || artist.publicKeyHash}
+            href={`/artist/${artist.slug || artist.publicKeyHash}`}
             data-artist-card
             className="group bg-sd-surface transition-colors duration-fast ease-out hover:bg-[#161616]"
           >

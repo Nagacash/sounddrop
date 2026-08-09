@@ -166,7 +166,7 @@ export default function ArtistProfile({ artist }: ArtistProfileProps) {
               {following ? 'Following' : 'Follow'}
             </button>
             <ShareAction
-              url={artistShareUrl(artist.publicKeyHash)}
+              url={artistShareUrl(artist.slug || artist.publicKeyHash)}
               title={`${artist.displayName} on SoundDrop`}
               text={`Listen to ${artist.displayName} — artist-owned music on SoundDrop.`}
               label="Share profile"

@@ -1,5 +1,6 @@
 import { listArtists, listTracks, type Artist as DbArtist, type Track as DbTrack } from '@/lib/db';
 import { hashPublicKey } from '@/lib/publicKeyHash';
+import { artistSlug } from '@/lib/slug';
 import {
   getAllArtists as getMockArtists,
   getArtistByHash as getMockArtistByHash,
@@ -19,7 +20,7 @@ function mapDbTrack(t: DbTrack): Track {
     name: t.name,
     duration: 0,
     isFree: true,
-    storageUrl: t.storage_url || '',
+    storageUrl: t.storage_url || `/api/media/${encodeURIComponent(t.cid)}`,
     verified: true,
     createdAt: t.created_at,
   };
@@ -28,6 +29,7 @@ function mapDbTrack(t: DbTrack): Track {
 async function toPublicArtist(
   artist: DbArtist,
   tracksByArtist: Map<string, DbTrack[]>,
+  takenSlugs: Set<string>,
 ): Promise<Artist | null> {
   let publicKeyHash: string;
   try {
@@ -38,8 +40,14 @@ async function toPublicArtist(
 
   const tracks = (tracksByArtist.get(artist.user_id) || []).map(mapDbTrack);
   const displayName = artist.display_name?.trim() || 'Artist';
+  const slug =
+    artist.slug ||
+    artistSlug(displayName, publicKeyHash, takenSlugs);
+
+  if (artist.slug) takenSlugs.add(artist.slug);
 
   return {
+    slug,
     publicKeyHash,
     displayName,
     bio: 'Artist-owned sound. Cryptographically verified.',
@@ -63,7 +71,10 @@ async function loadDbArtists(): Promise<Artist[]> {
     tracksByArtist.set(t.artist_id, list);
   }
 
-  const mapped = await Promise.all(artists.map((a) => toPublicArtist(a, tracksByArtist)));
+  const taken = new Set<string>();
+  const mapped = await Promise.all(
+    artists.map((a) => toPublicArtist(a, tracksByArtist, taken)),
+  );
   return mapped.filter((a): a is Artist => Boolean(a));
 }
 
@@ -72,9 +83,15 @@ function matchesQuery(artist: Artist, q: string): boolean {
   if (!needle) return true;
   return (
     artist.displayName.toLowerCase().includes(needle) ||
+    artist.slug.toLowerCase().includes(needle) ||
     artist.bio.toLowerCase().includes(needle) ||
     artist.publicKeyHash.toLowerCase().includes(needle)
   );
+}
+
+function matchesSlugOrHash(artist: Artist, key: string): boolean {
+  const k = key.toLowerCase();
+  return artist.slug.toLowerCase() === k || artist.publicKeyHash.toLowerCase() === k;
 }
 
 /** Public catalog: Neon artists when DATABASE_URL is set; mock demos otherwise / in MVP mock. */
@@ -87,26 +104,25 @@ export async function listPublicArtists(query = ''): Promise<Artist[]> {
   return artists.filter((a) => matchesQuery(a, query));
 }
 
-export async function getPublicArtist(publicKeyHash: string): Promise<Artist | null> {
-  if (!publicKeyHash) return null;
+export async function getPublicArtist(slugOrHash: string): Promise<Artist | null> {
+  if (!slugOrHash) return null;
 
   if (isMvpMockMode() || !process.env.DATABASE_URL) {
-    return getMockArtistByHash(publicKeyHash) || null;
+    return getMockArtistByHash(slugOrHash) || null;
   }
 
   const artists = await loadDbArtists();
-  const hit = artists.find((a) => a.publicKeyHash === publicKeyHash);
+  const hit = artists.find((a) => matchesSlugOrHash(a, slugOrHash));
   if (hit) return hit;
 
-  // Fallback for demos / preview hashes still linked in UI.
-  return getMockArtistByHash(publicKeyHash) || null;
+  return getMockArtistByHash(slugOrHash) || null;
 }
 
 export async function getPublicTrack(
-  publicKeyHash: string,
+  slugOrHash: string,
   trackId: string,
 ): Promise<{ artist: Artist; track: Track } | null> {
-  const artist = await getPublicArtist(publicKeyHash);
+  const artist = await getPublicArtist(slugOrHash);
   if (!artist) return null;
   const track = artist.tracks.find((t) => t.id === trackId);
   if (!track) return null;

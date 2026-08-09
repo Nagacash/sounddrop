@@ -3,11 +3,11 @@ import { getPublicArtist } from '@/lib/publicCatalog';
 import ArtistProfile from '@/components/ArtistProfile';
 import ArtistTrackList from '@/components/ArtistTrackList';
 
-type Props = { params: Promise<{ publicKeyHash: string }> };
+type Props = { params: Promise<{ slug: string }> };
 
 export default async function ArtistSpacePage({ params }: Props) {
-  const { publicKeyHash } = await params;
-  const artist = await getPublicArtist(publicKeyHash);
+  const { slug } = await params;
+  const artist = await getPublicArtist(slug);
 
   if (!artist) notFound();
 
@@ -16,6 +16,7 @@ export default async function ArtistSpacePage({ params }: Props) {
       <ArtistProfile artist={artist} />
       <ArtistTrackList
         tracks={artist.tracks}
+        slug={artist.slug}
         publicKeyHash={artist.publicKeyHash}
         artistName={artist.displayName}
       />

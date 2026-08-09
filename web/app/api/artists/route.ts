@@ -52,7 +52,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'invalid publicKey' }, { status: 400 });
   }
 
-  return NextResponse.json({ ok: true, artist, publicKeyHash });
+  return NextResponse.json({
+    ok: true,
+    artist,
+    publicKeyHash,
+    slug: artist.slug,
+  });
 }
 
 export async function GET() {

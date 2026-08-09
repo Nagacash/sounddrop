@@ -25,6 +25,11 @@ export default function GlobalPlayer() {
     const audio = audioRef.current;
     if (!audio || !currentTrack) return;
 
+    if (!currentTrack.storageUrl) {
+      setIsPlaying(false);
+      return;
+    }
+
     if (loadedId.current !== currentTrack.id) {
       audio.src = currentTrack.storageUrl;
       loadedId.current = currentTrack.id;

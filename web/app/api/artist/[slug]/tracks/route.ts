@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server';
 import { getPublicArtist } from '@/lib/publicCatalog';
 
-type Props = { params: Promise<{ publicKeyHash: string }> };
+type Props = { params: Promise<{ slug: string }> };
 
 export async function GET(_req: Request, { params }: Props) {
-  const { publicKeyHash } = await params;
-  const artist = await getPublicArtist(publicKeyHash);
+  const { slug } = await params;
+  const artist = await getPublicArtist(slug);
   if (!artist) {
     return NextResponse.json({ error: 'Artist not found' }, { status: 404 });
   }
-  return NextResponse.json({ artist });
+  return NextResponse.json({ tracks: artist.tracks });
 }
