@@ -10,6 +10,14 @@ import { isMvpMockModeClient } from '@/lib/mockMode';
 const POLICY_KEY = 'sd_policy_accepted_at';
 const PROFILE_SLUG_KEY = 'sd_profile_slug';
 
+type DashTrack = {
+  id: string;
+  title: string;
+  producers?: string | null;
+  featuring?: string | null;
+  storage_url?: string | null;
+};
+
 const initialPriv = typeof window !== 'undefined' ? localStorage.getItem('sd_priv') || '' : '';
 const initialPub = typeof window !== 'undefined' ? localStorage.getItem('sd_pub') || '' : '';
 const initialProfileSlug =
@@ -29,6 +37,11 @@ export default function ArtistSetupPage() {
   const [policyAccepted, setPolicyAccepted] = useState(false);
   const [displayName, setDisplayName] = useState('');
   const [bio, setBio] = useState('');
+  const [trackTitle, setTrackTitle] = useState('');
+  const [producers, setProducers] = useState('');
+  const [featuring, setFeaturing] = useState('');
+  const [myTracks, setMyTracks] = useState<DashTrack[]>([]);
+  const [savingId, setSavingId] = useState('');
   const [profileSlug, setProfileSlug] = useState(initialProfileSlug);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -42,6 +55,22 @@ export default function ArtistSetupPage() {
     router.push(`/artist/${slug}`);
   }
 
+  async function loadMyTracks() {
+    if (mock || !isSignedIn) return;
+    try {
+      const res = await fetch('/api/artists');
+      if (!res.ok) return;
+      const data = await res.json();
+      setMyTracks(Array.isArray(data.tracks) ? data.tracks : []);
+      const artist = data?.artist;
+      if (artist?.slug) rememberProfileSlug(artist.slug);
+      if (artist?.display_name && !displayName) setDisplayName(artist.display_name);
+      if (artist?.bio && !bio) setBio(artist.bio);
+    } catch {
+      /* ignore */
+    }
+  }
+
   useEffect(() => {
     if (mock) {
       if (!profileSlug) {
@@ -51,20 +80,7 @@ export default function ArtistSetupPage() {
       return;
     }
     if (!isSignedIn) return;
-    void fetch('/api/artists')
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        const artist = data?.artist;
-        if (!artist) return;
-        if (typeof artist.slug === 'string' && artist.slug) rememberProfileSlug(artist.slug);
-        if (typeof artist.display_name === 'string' && artist.display_name && !displayName) {
-          setDisplayName(artist.display_name);
-        }
-        if (typeof artist.bio === 'string' && artist.bio && !bio) {
-          setBio(artist.bio);
-        }
-      })
-      .catch(() => {});
+    void loadMyTracks();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- hydrate once when signed in
   }, [isSignedIn, mock]);
 
@@ -108,11 +124,7 @@ export default function ArtistSetupPage() {
       '';
     if (slug) rememberProfileSlug(slug);
     if (!quiet) {
-      setStatus('[ PUBLIC KEY REGISTERED — OPENING YOUR SPACE… ]');
-      if (slug) {
-        goToSpace(slug);
-        return true;
-      }
+      setStatus('[ PUBLIC KEY REGISTERED ]');
     }
     return true;
   }
@@ -146,23 +158,27 @@ export default function ArtistSetupPage() {
     const buf = await f.arrayBuffer();
     setStage('[ HASHING / CID ]');
     const cid = await computeCID(buf);
+    const defaultTitle = f.name.replace(/\.mp3$/i, '');
     const meta = {
       name: f.name,
       size: f.size,
       type: f.type || 'audio/mpeg',
       cid,
       ts: new Date().toISOString(),
-      title: f.name.replace(/\.mp3$/i, ''),
+      title: trackTitle.trim() || defaultTitle,
     };
     setStage('[ SIGNING / ED25519 ]');
     const signature = await signMeta(meta, pk);
-    setStage('[ UPLOADING / VERIFY-AT-INGEST ]');
+    setStage('[ UPLOADING / STORING AUDIO ]');
     const fd = new FormData();
     fd.append('file', f);
     fd.append('meta', JSON.stringify(meta));
     fd.append('signature', signature);
     fd.append('publicKey', pb);
     fd.append('artistDisplayName', displayName || user?.fullName || 'Artist');
+    fd.append('title', trackTitle.trim() || defaultTitle);
+    fd.append('producers', producers.trim());
+    fd.append('featuring', featuring.trim());
     const res = await fetch('/api/tracks', { method: 'POST', body: fd });
     const data = await res.json();
     setStage('');
@@ -173,13 +189,43 @@ export default function ArtistSetupPage() {
         profileSlug;
       if (slug) rememberProfileSlug(slug);
       const warn = data.warning ? ` · ${data.warning}` : '';
-      setStatus(`[ TRACK INGESTED ] CID ${cid.slice(0, 24)}…${warn}`);
+      setStatus(`[ TRACK READY ] Re-upload fixed playback if needed.${warn}`);
+      setTrackTitle('');
+      setProducers('');
+      setFeaturing('');
+      if (fileRef.current) fileRef.current.value = '';
+      await loadMyTracks();
       if (slug) {
-        setStatus(`[ TRACK INGESTED — OPENING YOUR SPACE… ]${warn}`);
-        goToSpace(slug);
+        // Give a beat to see success, then open the space.
+        window.setTimeout(() => goToSpace(slug), 600);
       }
     } else {
       setStatus(`[ REJECTED ] ${JSON.stringify(data)}`);
+    }
+  }
+
+  async function saveTrack(track: DashTrack) {
+    setSavingId(track.id);
+    try {
+      const res = await fetch(`/api/tracks/${encodeURIComponent(track.id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: track.title,
+          producers: track.producers || '',
+          featuring: track.featuring || '',
+          publicKey: pubKey || undefined,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setStatus(`[ SAVE FAILED ] ${JSON.stringify(data)}`);
+        return;
+      }
+      setStatus('[ TRACK UPDATED ]');
+      await loadMyTracks();
+    } finally {
+      setSavingId('');
     }
   }
 
@@ -251,7 +297,7 @@ export default function ArtistSetupPage() {
           PRIV (LOCAL): {privKey ? `${privKey.slice(0, 24)}…` : '—'}
         </p>
         <button type="button" onClick={handleRegisterClick} className="sd-btn mt-4">
-          [ REGISTER PUBLIC KEY ]
+          [ SAVE PROFILE ]
         </button>
       </section>
 
@@ -269,6 +315,40 @@ export default function ArtistSetupPage() {
             copyright, licensing, and any disputes. SoundDrop is not liable.
           </span>
         </label>
+
+        <label className="font-telemetry mt-5 block text-[10px] text-sd-muted" htmlFor="track-title">
+          TRACK TITLE
+        </label>
+        <input
+          id="track-title"
+          value={trackTitle}
+          onChange={(e) => setTrackTitle(e.target.value.slice(0, 120))}
+          placeholder="Song name (rename before upload)"
+          className="sd-input mt-2"
+        />
+
+        <label className="font-telemetry mt-4 block text-[10px] text-sd-muted" htmlFor="track-prod">
+          PRODUCERS (OPTIONAL)
+        </label>
+        <input
+          id="track-prod"
+          value={producers}
+          onChange={(e) => setProducers(e.target.value.slice(0, 200))}
+          placeholder="e.g. Metro Boomin, Mike Dean"
+          className="sd-input mt-2"
+        />
+
+        <label className="font-telemetry mt-4 block text-[10px] text-sd-muted" htmlFor="track-feat">
+          FEATURING (OPTIONAL)
+        </label>
+        <input
+          id="track-feat"
+          value={featuring}
+          onChange={(e) => setFeaturing(e.target.value.slice(0, 200))}
+          placeholder="e.g. Guest Artist"
+          className="sd-input mt-2"
+        />
+
         <input
           ref={fileRef}
           type="file"
@@ -285,6 +365,66 @@ export default function ArtistSetupPage() {
         )}
       </section>
 
+      {myTracks.length > 0 && (
+        <section className="sd-panel mt-8 border border-sd-border p-5">
+          <h2 className="font-telemetry text-[11px] text-sd-muted">[ YOUR TRACKS / RENAME ]</h2>
+          <div className="mt-4 flex flex-col gap-6">
+            {myTracks.map((t) => (
+              <div key={t.id} className="border border-sd-border p-4">
+                <label className="font-telemetry text-[10px] text-sd-muted">TITLE</label>
+                <input
+                  value={t.title || ''}
+                  onChange={(e) =>
+                    setMyTracks((prev) =>
+                      prev.map((x) =>
+                        x.id === t.id ? { ...x, title: e.target.value.slice(0, 120) } : x,
+                      ),
+                    )
+                  }
+                  className="sd-input mt-2"
+                />
+                <label className="font-telemetry mt-3 block text-[10px] text-sd-muted">
+                  PRODUCERS
+                </label>
+                <input
+                  value={t.producers || ''}
+                  onChange={(e) =>
+                    setMyTracks((prev) =>
+                      prev.map((x) =>
+                        x.id === t.id ? { ...x, producers: e.target.value.slice(0, 200) } : x,
+                      ),
+                    )
+                  }
+                  className="sd-input mt-2"
+                />
+                <label className="font-telemetry mt-3 block text-[10px] text-sd-muted">
+                  FEATURING
+                </label>
+                <input
+                  value={t.featuring || ''}
+                  onChange={(e) =>
+                    setMyTracks((prev) =>
+                      prev.map((x) =>
+                        x.id === t.id ? { ...x, featuring: e.target.value.slice(0, 200) } : x,
+                      ),
+                    )
+                  }
+                  className="sd-input mt-2"
+                />
+                <button
+                  type="button"
+                  disabled={savingId === t.id}
+                  onClick={() => void saveTrack(t)}
+                  className="sd-btn mt-4"
+                >
+                  {savingId === t.id ? '[ SAVING… ]' : '[ SAVE TRACK ]'}
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {status && (
         <div
           className={`mt-6 border border-sd-border p-4 ${
@@ -296,10 +436,7 @@ export default function ArtistSetupPage() {
           {profileSlug &&
             !status.includes('FAILED') &&
             !status.includes('REJECTED') && (
-              <Link
-                href={`/artist/${profileSlug}`}
-                className="sd-btn mt-4 inline-flex"
-              >
+              <Link href={`/artist/${profileSlug}`} className="sd-btn mt-4 inline-flex">
                 [ OPEN YOUR SPACE ]
               </Link>
             )}

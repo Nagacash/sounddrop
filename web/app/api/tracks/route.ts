@@ -38,6 +38,12 @@ export async function POST(req: NextRequest) {
   const signature = form.get('signature');
   const publicKey = form.get('publicKey');
   const artistDisplayName = (form.get('artistDisplayName') as string) || 'Artist';
+  const titleOverride =
+    typeof form.get('title') === 'string' ? String(form.get('title')).trim() : '';
+  const producers =
+    typeof form.get('producers') === 'string' ? String(form.get('producers')).trim().slice(0, 200) : '';
+  const featuring =
+    typeof form.get('featuring') === 'string' ? String(form.get('featuring')).trim().slice(0, 200) : '';
 
   if (
     !(file instanceof Blob) ||
@@ -137,10 +143,15 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const displayTitle =
+    titleOverride ||
+    (typeof meta.title === 'string' ? meta.title.trim() : '') ||
+    String(meta.name).replace(/\.mp3$/i, '');
+
   const track = await insertTrack({
     id: realCid,
     artist_id: artistId,
-    title: typeof meta.title === 'string' ? meta.title : '',
+    title: displayTitle.slice(0, 120),
     name: String(meta.name),
     size: Number(meta.size),
     type: typeof meta.type === 'string' ? meta.type : 'audio/mpeg',
@@ -148,6 +159,8 @@ export async function POST(req: NextRequest) {
     signature,
     public_key: publicKey,
     storage_url: storageUrl,
+    producers: producers || null,
+    featuring: featuring || null,
     created_at: new Date().toISOString(),
   });
 

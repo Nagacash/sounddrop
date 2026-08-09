@@ -24,10 +24,19 @@ CREATE TABLE IF NOT EXISTS tracks (
   cid           TEXT NOT NULL,
   signature     TEXT NOT NULL,             -- base64 Ed25519 sig over canonical meta
   public_key    TEXT NOT NULL,             -- must match artists.public_key at ingest
-  storage_url   TEXT,                      -- where the audio bytes live (S3/IPFS)
+  storage_url   TEXT,                      -- playable URL (/api/media/{cid} or blob)
+  producers     TEXT,                      -- optional producer credits
+  featuring     TEXT,                      -- optional featured artists
   created_at    TIMESTAMPTZ DEFAULT now(),
   removed_at    TIMESTAMPTZ,
   removed_reason TEXT
+);
+
+CREATE TABLE IF NOT EXISTS track_audio (
+  cid           TEXT PRIMARY KEY,
+  bytes         BYTEA NOT NULL,
+  content_type  TEXT NOT NULL DEFAULT 'audio/mpeg',
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE INDEX IF NOT EXISTS idx_tracks_artist ON tracks(artist_id);

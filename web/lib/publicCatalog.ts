@@ -23,6 +23,8 @@ function mapDbTrack(t: DbTrack): Track {
     storageUrl: t.storage_url || `/api/media/${encodeURIComponent(t.cid)}`,
     verified: true,
     createdAt: t.created_at,
+    producers: t.producers || '',
+    featuring: t.featuring || '',
   };
 }
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isValidCid } from '@/lib/crypto';
-import { readLocalAudio } from '@/lib/audioStorage';
+import { readAudio } from '@/lib/audioStorage';
 
 type Props = { params: Promise<{ cid: string }> };
 
@@ -12,7 +12,7 @@ export async function GET(req: NextRequest, { params }: Props) {
     return NextResponse.json({ error: 'invalid cid' }, { status: 400 });
   }
 
-  const buf = readLocalAudio(cid);
+  const buf = await readAudio(cid);
   if (!buf) {
     return NextResponse.json({ error: 'not found' }, { status: 404 });
   }

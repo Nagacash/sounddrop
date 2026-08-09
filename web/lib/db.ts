@@ -32,6 +32,8 @@ export type Track = {
   signature: string;
   public_key: string;
   storage_url: string | null;
+  producers?: string | null;
+  featuring?: string | null;
   created_at: string;
   removed_at?: string | null;
   removed_reason?: string | null;
@@ -131,6 +133,8 @@ function mapTrack(row: typeof tracks.$inferSelect): Track {
     signature: row.signature,
     public_key: row.public_key,
     storage_url: row.storage_url,
+    producers: row.producers || '',
+    featuring: row.featuring || '',
     created_at: iso(row.created_at),
     removed_at: isoOrNull(row.removed_at),
     removed_reason: row.removed_reason,
@@ -275,6 +279,8 @@ export async function insertTrack(t: Track) {
       signature: t.signature,
       public_key: t.public_key,
       storage_url: t.storage_url,
+      producers: t.producers || null,
+      featuring: t.featuring || null,
       created_at: new Date(t.created_at),
       removed_at: t.removed_at ? new Date(t.removed_at) : null,
       removed_reason: t.removed_reason ?? null,
@@ -289,11 +295,51 @@ export async function insertTrack(t: Track) {
         signature: t.signature,
         public_key: t.public_key,
         storage_url: t.storage_url,
+        producers: t.producers || null,
+        featuring: t.featuring || null,
         removed_at: null,
         removed_reason: null,
       },
     });
   return t;
+}
+
+export async function updateTrackMeta(
+  id: string,
+  patch: { title?: string; producers?: string; featuring?: string },
+): Promise<Track | null> {
+  const title = patch.title?.trim();
+  const producers = patch.producers?.trim() ?? undefined;
+  const featuring = patch.featuring?.trim() ?? undefined;
+
+  if (!useNeon()) {
+    const d = readAll();
+    const i = d.tracks.findIndex((t) => t.id === id);
+    if (i < 0) return null;
+    d.tracks[i] = {
+      ...d.tracks[i],
+      ...(title !== undefined ? { title } : {}),
+      ...(producers !== undefined ? { producers } : {}),
+      ...(featuring !== undefined ? { featuring } : {}),
+    };
+    writeAll(d);
+    return d.tracks[i];
+  }
+
+  const db = getDb();
+  const set: Partial<typeof tracks.$inferInsert> = {};
+  if (title !== undefined) set.title = title || null;
+  if (producers !== undefined) set.producers = producers || null;
+  if (featuring !== undefined) set.featuring = featuring || null;
+  if (Object.keys(set).length === 0) return getTrack(id);
+
+  const rows = await db.update(tracks).set(set).where(eq(tracks.id, id)).returning();
+  return rows[0] ? mapTrack(rows[0]) : null;
+}
+
+export async function listTracksForArtist(artistId: string): Promise<Track[]> {
+  const all = await listTracks({ includeRemoved: false });
+  return all.filter((t) => t.artist_id === artistId);
 }
 
 export async function listTracks(opts?: { includeRemoved?: boolean }): Promise<Track[]> {

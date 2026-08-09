@@ -113,7 +113,9 @@ export default function ArtistTrackList({
                   </p>
                   <p className="mt-0.5 truncate text-sm text-white/45">
                     {artistName}
-                    {track.verified ? ' · Signed & verified' : ''}
+                    {track.featuring ? ` feat. ${track.featuring}` : ''}
+                    {track.producers ? ` · prod. ${track.producers}` : ''}
+                    {track.verified ? ' · Signed' : ''}
                   </p>
                 </button>
 

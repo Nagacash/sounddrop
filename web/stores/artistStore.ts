@@ -11,6 +11,8 @@ export interface Track {
   storageUrl: string;
   verified: boolean;
   createdAt: string;
+  producers?: string;
+  featuring?: string;
 }
 
 export interface ArtistLinks {

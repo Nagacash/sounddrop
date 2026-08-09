@@ -31,12 +31,25 @@ export default function GlobalPlayer() {
     }
 
     if (loadedId.current !== currentTrack.id) {
+      audio.pause();
       audio.src = currentTrack.storageUrl;
+      audio.load();
       loadedId.current = currentTrack.id;
     }
 
     if (isPlaying) {
-      void audio.play().catch(() => setIsPlaying(false));
+      const tryPlay = () => {
+        void audio.play().catch(() => setIsPlaying(false));
+      };
+      if (audio.readyState >= 2) tryPlay();
+      else {
+        const onReady = () => {
+          audio.removeEventListener('canplay', onReady);
+          tryPlay();
+        };
+        audio.addEventListener('canplay', onReady);
+        return () => audio.removeEventListener('canplay', onReady);
+      }
     } else {
       audio.pause();
     }

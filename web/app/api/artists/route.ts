@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { createClerkClient } from '@clerk/backend';
-import { upsertArtist, getArtist } from '@/lib/db';
+import { upsertArtist, getArtist, listTracksForArtist } from '@/lib/db';
 import { isMvpMockMode } from '@/lib/mockMode';
 import { hashPublicKey } from '@/lib/publicKeyHash';
 
@@ -72,5 +72,6 @@ export async function GET() {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
   const artist = await getArtist(userId);
-  return NextResponse.json({ artist });
+  const tracks = artist ? await listTracksForArtist(userId) : [];
+  return NextResponse.json({ artist, tracks });
 }
