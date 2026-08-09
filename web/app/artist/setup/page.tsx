@@ -200,7 +200,7 @@ export default function ArtistSetupPage() {
   }
 
   return (
-    <main className="mx-auto max-w-2xl px-5 py-10">
+    <main className="mx-auto max-w-2xl px-5 pb-40 pt-10 sm:pb-44">
       <p className="font-telemetry mb-2 text-[10px] text-sd-muted">UNIT / DASHBOARD · KEY LOCAL</p>
       <h1 className="font-display text-[clamp(2rem,6vw,3.5rem)] text-sd-text">ARTIST DASHBOARD</h1>
       <hr className="sd-rule my-4 max-w-[6rem]" />
