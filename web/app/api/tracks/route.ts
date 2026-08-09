@@ -3,7 +3,7 @@ import { auth } from '@clerk/nextjs/server';
 import { createClerkClient } from '@clerk/backend';
 import { verifyIngest } from '@/lib/ingest';
 import { checkAudioFingerprint } from '@/lib/audd';
-import { getArtist, insertTrack, listTracks } from '@/lib/db';
+import { getArtist, insertTrack, listTracks, upsertArtist } from '@/lib/db';
 import { isMvpMockMode } from '@/lib/mockMode';
 import { hashPublicKey } from '@/lib/publicKeyHash';
 
@@ -68,8 +68,18 @@ export async function POST(req: NextRequest) {
 
   let registeredPublicKey = publicKey;
   if (!mock && userId) {
-    const artist = await getArtist(userId);
-    if (!artist) return NextResponse.json({ error: 'artist not registered' }, { status: 403 });
+    let artist = await getArtist(userId);
+    // Auto-register on first upload so users aren't blocked if they skipped
+    // "Register public key", or if a prior register was lost (ephemeral FS).
+    if (!artist) {
+      artist = await upsertArtist({
+        user_id: userId,
+        email: '',
+        display_name: artistDisplayName || 'Artist',
+        public_key: publicKey,
+        created_at: new Date().toISOString(),
+      });
+    }
     registeredPublicKey = artist.public_key;
   }
 

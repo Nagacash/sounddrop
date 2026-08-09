@@ -5,8 +5,12 @@
 import fs from 'fs';
 import path from 'path';
 
+// On Vercel the deploy FS is read-only; only /tmp is writable (still ephemeral).
 const FILE =
-  process.env.DB_FILE || path.join(process.cwd(), 'data', 'sounddrop.json');
+  process.env.DB_FILE ||
+  (process.env.VERCEL
+    ? '/tmp/sounddrop.json'
+    : path.join(process.cwd(), 'data', 'sounddrop.json'));
 
 export type Artist = {
   user_id: string;

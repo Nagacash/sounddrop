@@ -40,9 +40,9 @@ export default function ArtistSetupPage() {
     return { pk, pb };
   }
 
-  async function register() {
+  async function register(quiet = false) {
     const { pb } = await ensureKeys();
-    setStatus('[ REGISTERING PUBLIC KEY… ]');
+    if (!quiet) setStatus('[ REGISTERING PUBLIC KEY… ]');
     const res = await fetch('/api/artists', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -52,8 +52,13 @@ export default function ArtistSetupPage() {
         email: user?.primaryEmailAddress?.emailAddress || '',
       }),
     });
-    const data = await res.json();
-    setStatus(res.ok ? '[ PUBLIC KEY REGISTERED ]' : `[ FAILED ] ${JSON.stringify(data)}`);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setStatus(`[ FAILED ] ${JSON.stringify(data)}`);
+      return false;
+    }
+    if (!quiet) setStatus('[ PUBLIC KEY REGISTERED ]');
+    return true;
   }
 
   async function upload() {
@@ -74,6 +79,13 @@ export default function ArtistSetupPage() {
     localStorage.setItem(POLICY_KEY, new Date().toISOString());
 
     const { pk, pb } = await ensureKeys();
+    setStage('[ REGISTERING ARTIST ]');
+    const registered = await register(true);
+    if (!registered) {
+      setStage('');
+      return;
+    }
+
     setStage('[ READING FILE ]');
     const buf = await f.arrayBuffer();
     setStage('[ HASHING / CID ]');
