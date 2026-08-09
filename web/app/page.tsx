@@ -58,7 +58,7 @@ export default function Home() {
               Artist-owned sound. Cryptographically verified. Each artist has a space — not a feed.
             </p>
             <Link href="/artist/setup" className="sd-btn mt-8">
-              [ UPLOAD YOUR MUSIC ]
+              [ ARTIST DASHBOARD ]
             </Link>
           </div>
           <aside className="font-telemetry flex flex-col justify-between gap-6 p-6 text-[11px] text-sd-muted sm:p-8">

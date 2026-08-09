@@ -16,6 +16,7 @@ export type Artist = {
   email: string;
   display_name: string;
   slug: string;
+  bio: string;
   public_key: string;
   created_at: string;
 };
@@ -80,6 +81,7 @@ function mapArtist(row: typeof artists.$inferSelect): Artist {
     email: row.email || '',
     display_name: row.display_name || '',
     slug: row.slug || '',
+    bio: row.bio || '',
     public_key: row.public_key,
     created_at: iso(row.created_at),
   };
@@ -173,12 +175,13 @@ function writeAll(data: DbShape) {
 
 /* ---------------- Public API ---------------- */
 
-export async function upsertArtist(a: Omit<Artist, 'slug'> & { slug?: string }) {
+export async function upsertArtist(a: Omit<Artist, 'slug' | 'bio'> & { slug?: string; bio?: string }) {
   const existing = await getArtist(a.user_id);
   const slug =
     a.slug ||
     (await resolveSlug(a.user_id, a.display_name, a.public_key, existing?.slug || null));
-  const row: Artist = { ...a, slug };
+  const bio = (a.bio ?? existing?.bio ?? '').trim();
+  const row: Artist = { ...a, slug, bio };
 
   if (!useNeon()) {
     const d = readAll();
@@ -197,6 +200,7 @@ export async function upsertArtist(a: Omit<Artist, 'slug'> & { slug?: string }) 
       email: row.email || null,
       display_name: row.display_name || null,
       slug: row.slug,
+      bio: row.bio || null,
       public_key: row.public_key,
       created_at: new Date(row.created_at),
     })
@@ -206,6 +210,7 @@ export async function upsertArtist(a: Omit<Artist, 'slug'> & { slug?: string }) 
         email: row.email || null,
         display_name: row.display_name || null,
         slug: row.slug,
+        bio: row.bio || null,
         public_key: row.public_key,
       },
     });

@@ -5,9 +5,12 @@ import { usePathname } from 'next/navigation';
 import { SignInButton, SignUpButton, Show, UserButton } from '@clerk/nextjs';
 import AdminNavLink from '@/components/AdminNavLink';
 
-/** Public artist storefronts — keep SoundDrop chrome out of the fan experience. */
+/** Public artist storefronts — fan view: no upload / dashboard chrome. */
 export function isArtistSpacePath(pathname: string) {
-  return /^\/artist\/(?!setup(?:\/|$))[^/]+/.test(pathname);
+  // /artist/setup is the dashboard; everything else under /artist/:slug is public.
+  if (!pathname.startsWith('/artist/')) return false;
+  if (pathname === '/artist/setup' || pathname.startsWith('/artist/setup/')) return false;
+  return pathname.length > '/artist/'.length;
 }
 
 export default function AppHeader({ mock }: { mock: boolean }) {
@@ -42,12 +45,23 @@ export default function AppHeader({ mock }: { mock: boolean }) {
           >
             [ DISCOVER ]
           </Link>
-          <Link
-            href="/artist/setup"
-            className="px-3 py-3 transition-colors duration-fast ease-out hover:text-sd-text"
-          >
-            [ UPLOAD ]
-          </Link>
+          {mock ? (
+            <Link
+              href="/artist/setup"
+              className="px-3 py-3 transition-colors duration-fast ease-out hover:text-sd-text"
+            >
+              [ DASHBOARD ]
+            </Link>
+          ) : (
+            <Show when="signed-in">
+              <Link
+                href="/artist/setup"
+                className="px-3 py-3 transition-colors duration-fast ease-out hover:text-sd-text"
+              >
+                [ DASHBOARD ]
+              </Link>
+            </Show>
+          )}
           <Link
             href="/policy/content-responsibility"
             className="px-3 py-3 transition-colors duration-fast ease-out hover:text-sd-text"

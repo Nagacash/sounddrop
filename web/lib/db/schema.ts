@@ -13,6 +13,7 @@ export const artists = pgTable(
     email: text('email'),
     display_name: text('display_name'),
     slug: text('slug'),
+    bio: text('bio'),
     public_key: text('public_key').notNull(),
     created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },

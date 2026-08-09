@@ -54,7 +54,7 @@ export default function ArtistTrackList({
   }, [publicKeyHash, tracks.length]);
 
   return (
-    <section className="relative bg-sd-bg px-5 pb-28 pt-10 sm:px-10 lg:px-16">
+    <section className="relative bg-sd-bg px-5 pb-8 pt-14 sm:px-10 lg:px-16">
       <div className="mx-auto max-w-5xl">
         <div className="mb-6 flex items-end justify-between gap-4 border-b border-white/10 pb-4">
           <h2 className="font-display text-2xl text-white sm:text-3xl">Discography</h2>

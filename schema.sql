@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS artists (
   email         TEXT,
   display_name  TEXT,
   slug          TEXT UNIQUE,               -- vanity URL: /artist/{slug}
+  bio           TEXT,                      -- short public artist bio
   public_key    TEXT NOT NULL,             -- base64 SPKI, used to verify uploads
   created_at    TIMESTAMPTZ DEFAULT now()
 );

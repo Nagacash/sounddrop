@@ -28,6 +28,7 @@ export default function ArtistSetupPage() {
   const [stage, setStage] = useState('');
   const [policyAccepted, setPolicyAccepted] = useState(false);
   const [displayName, setDisplayName] = useState('');
+  const [bio, setBio] = useState('');
   const [profileSlug, setProfileSlug] = useState(initialProfileSlug);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -53,8 +54,15 @@ export default function ArtistSetupPage() {
     void fetch('/api/artists')
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        const slug = data?.artist?.slug;
-        if (typeof slug === 'string' && slug) rememberProfileSlug(slug);
+        const artist = data?.artist;
+        if (!artist) return;
+        if (typeof artist.slug === 'string' && artist.slug) rememberProfileSlug(artist.slug);
+        if (typeof artist.display_name === 'string' && artist.display_name && !displayName) {
+          setDisplayName(artist.display_name);
+        }
+        if (typeof artist.bio === 'string' && artist.bio && !bio) {
+          setBio(artist.bio);
+        }
       })
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps -- hydrate once when signed in
@@ -85,6 +93,7 @@ export default function ArtistSetupPage() {
       body: JSON.stringify({
         publicKey: pb,
         displayName: displayName || user?.fullName || 'Artist',
+        bio: bio.trim(),
         email: user?.primaryEmailAddress?.emailAddress || '',
       }),
     });
@@ -192,8 +201,8 @@ export default function ArtistSetupPage() {
 
   return (
     <main className="mx-auto max-w-2xl px-5 py-10">
-      <p className="font-telemetry mb-2 text-[10px] text-sd-muted">UNIT / SETUP · KEY LOCAL</p>
-      <h1 className="font-display text-[clamp(2rem,6vw,3.5rem)] text-sd-text">ARTIST SETUP</h1>
+      <p className="font-telemetry mb-2 text-[10px] text-sd-muted">UNIT / DASHBOARD · KEY LOCAL</p>
+      <h1 className="font-display text-[clamp(2rem,6vw,3.5rem)] text-sd-text">ARTIST DASHBOARD</h1>
       <hr className="sd-rule my-4 max-w-[6rem]" />
       <p className="text-pretty text-sm text-sd-muted">
         Your private key stays in this browser. Only your public key is sent to the server.{' '}
@@ -224,6 +233,15 @@ export default function ArtistSetupPage() {
           placeholder="Your artist name"
           className="sd-input mt-3"
         />
+        <h2 className="font-telemetry mt-6 text-[11px] text-sd-muted">[ BIO ]</h2>
+        <textarea
+          value={bio}
+          onChange={(e) => setBio(e.target.value.slice(0, 500))}
+          placeholder="A short bio for your artist space"
+          rows={4}
+          className="sd-input mt-3 min-h-[6.5rem] resize-y"
+        />
+        <p className="font-telemetry mt-2 text-[10px] text-sd-muted">{bio.length}/500</p>
       </section>
 
       <section className="sd-panel mt-px border border-sd-border p-5">

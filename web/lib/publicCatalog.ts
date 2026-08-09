@@ -50,7 +50,9 @@ async function toPublicArtist(
     slug,
     publicKeyHash,
     displayName,
-    bio: 'Artist-owned sound. Cryptographically verified.',
+    bio:
+      artist.bio?.trim() ||
+      'Artist-owned sound. Cryptographically verified.',
     profileImageUrl: DEFAULT_PROFILE_IMAGE,
     followerCount: 0,
     totalDownloads: 0,

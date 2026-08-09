@@ -103,7 +103,7 @@ export default function ArtistProfile({ artist }: ArtistProfileProps) {
         />
       </div>
 
-      <div className="relative z-10 flex min-h-[100dvh] flex-col justify-end px-5 pb-14 pt-24 sm:px-10 lg:px-16">
+      <div className="relative z-10 flex min-h-[100dvh] flex-col justify-end px-5 pb-16 pt-24 sm:px-10 sm:pb-20 lg:px-16">
         <div className="max-w-5xl">
           <p
             data-hero-meta
@@ -127,7 +127,7 @@ export default function ArtistProfile({ artist }: ArtistProfileProps) {
             {artist.bio}
           </p>
 
-          <p data-hero-meta className="mt-4 text-sm text-white/55">
+          <p data-hero-meta className="mt-5 text-sm text-white/55">
             {artist.followerCount.toLocaleString()} fans · {artist.totalDownloads.toLocaleString()}{' '}
             plays · {artist.tracks.length} releases
           </p>

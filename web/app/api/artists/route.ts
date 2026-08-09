@@ -37,10 +37,14 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  const bio =
+    typeof body.bio === 'string' ? body.bio.trim().slice(0, 500) : undefined;
+
   const artist = await upsertArtist({
     user_id: resolvedUserId,
     email: body.email || '',
     display_name: body.displayName || '',
+    bio,
     public_key: publicKey,
     created_at: new Date().toISOString(),
   });
