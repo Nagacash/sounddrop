@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useUIStore } from '@/stores/uiStore';
 import TrendingTracks, { flattenDiscoverTracks } from '@/components/TrendingTracks';
 import ArtistAvatar from '@/components/ArtistAvatar';
@@ -47,15 +48,29 @@ export default function Home() {
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-5 pb-28 pt-8 sm:pt-10">
       <section className="mb-10 border border-sd-border bg-sd-surface">
-        <div className="border-b border-sd-border px-5 py-8 sm:px-8 sm:py-10">
-          <p className="font-telemetry text-xs text-sd-status">[ ARTIST-OWNED · ED25519 ]</p>
-          <h1 className="font-display mt-3 text-[clamp(2.75rem,9vw,5.5rem)] text-sd-text">
-            SoundDrop
-          </h1>
-          <p className="text-pretty mt-4 max-w-2xl text-base leading-relaxed text-sd-muted">
-            Publish MP3s signed with Ed25519 keys kept in your browser. Listeners stream and download
-            from your public space. No middleman catalog.
-          </p>
+        <div className="grid border-b border-sd-border lg:grid-cols-[1.2fr_0.8fr]">
+          <div className="px-5 py-8 sm:px-8 sm:py-10">
+            <p className="font-telemetry text-xs text-sd-status">[ ARTIST-OWNED · ED25519 ]</p>
+            <h1 className="font-display mt-3 text-[clamp(2.75rem,9vw,5.5rem)] text-sd-text">
+              SoundDrop
+            </h1>
+            <p className="text-pretty mt-4 max-w-2xl text-base leading-relaxed text-sd-muted">
+              Publish MP3s signed with Ed25519 keys kept in your browser. Listeners stream and download
+              from your public space. No middleman catalog.
+            </p>
+          </div>
+          <div className="relative hidden min-h-[220px] border-l border-sd-border lg:block">
+            <Image
+              src="/hero-rooftop.jpg"
+              alt="SoundDrop Rooftop Session"
+              fill
+              sizes="(max-width: 1024px) 100vw, 40vw"
+              className="object-cover opacity-80 filter grayscale contrast-125 transition-opacity duration-300 hover:opacity-100"
+            />
+            <div className="absolute bottom-3 left-3 bg-sd-bg/90 px-2 py-1 font-telemetry text-[10px] text-sd-status border border-sd-border">
+              [ LIVE SESSION · RAW AUDIO ]
+            </div>
+          </div>
         </div>
 
         <div className="px-5 py-5 sm:px-8 sm:py-6">
@@ -146,6 +161,33 @@ export default function Home() {
               </div>
             </li>
           </ol>
+
+          <div className="mt-8 grid gap-4 border-t border-sd-border pt-8 sm:grid-cols-2">
+            <div className="relative h-44 overflow-hidden border border-sd-border">
+              <Image
+                src="/studio-focus.jpg"
+                alt="Studio Focus"
+                fill
+                sizes="(max-width: 640px) 100vw, 50vw"
+                className="object-cover opacity-75 filter grayscale contrast-125 transition-opacity duration-300 hover:opacity-95"
+              />
+              <div className="absolute bottom-2 left-2 bg-sd-bg/90 px-2 py-0.5 font-telemetry text-[9px] text-sd-text border border-sd-border">
+                [ STUDIO PRODUCER · ED25519 SIGNING ]
+              </div>
+            </div>
+            <div className="relative h-44 overflow-hidden border border-sd-border">
+              <Image
+                src="/live-underground.jpg"
+                alt="Underground Live"
+                fill
+                sizes="(max-width: 640px) 100vw, 50vw"
+                className="object-cover opacity-75 filter grayscale contrast-125 transition-opacity duration-300 hover:opacity-95"
+              />
+              <div className="absolute bottom-2 left-2 bg-sd-bg/90 px-2 py-0.5 font-telemetry text-[9px] text-sd-status border border-sd-border">
+                [ UNDERGROUND VENUE · DIRECT FAN CONNECTION ]
+              </div>
+            </div>
+          </div>
 
           <div className="mt-8 border-t border-sd-border pt-6">
             <p className="font-telemetry text-xs text-sd-accent">FOR LISTENERS</p>
