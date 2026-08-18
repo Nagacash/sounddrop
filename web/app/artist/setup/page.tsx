@@ -75,9 +75,10 @@ export default function ArtistSetupPage() {
   }
 
   async function loadMyTracks() {
-    if (mock || !isSignedIn) return;
     try {
-      const res = await fetch('/api/artists');
+      const pb = localStorage.getItem('sd_pub') || '';
+      const url = pb ? `/api/artists?publicKey=${encodeURIComponent(pb)}` : '/api/artists';
+      const res = await fetch(url);
       if (!res.ok) return;
       const data = await res.json();
       setMyTracks(Array.isArray(data.tracks) ? data.tracks : []);
@@ -99,16 +100,12 @@ export default function ArtistSetupPage() {
   }
 
   useEffect(() => {
-    if (mock) {
-      if (!profileSlug) {
-        const legacy = localStorage.getItem('sd_profile_hash');
-        if (legacy) rememberProfileSlug(legacy);
-      }
-      return;
+    if (!profileSlug) {
+      const legacy = localStorage.getItem('sd_profile_hash');
+      if (legacy) rememberProfileSlug(legacy);
     }
-    if (!isSignedIn) return;
     void loadMyTracks();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- hydrate once when signed in
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- hydrate once on mount
   }, [isSignedIn, mock]);
 
   async function ensureKeys() {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { createClerkClient } from '@clerk/backend';
-import { upsertArtist, getArtist, listTracksForArtist } from '@/lib/db';
+import { upsertArtist, getArtist, listTracksForArtist, listTracks } from '@/lib/db';
 import { isMvpMockMode } from '@/lib/mockMode';
 import { hashPublicKey } from '@/lib/publicKeyHash';
 import { normalizeProfileUrl } from '@/lib/profileLinks';
@@ -98,14 +98,34 @@ export async function POST(req: NextRequest) {
   });
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const mock = isMvpMockMode();
-  if (mock) {
-    return NextResponse.json({ artist: null, mock: true });
+  let resolvedUserId: string | null = null;
+
+  if (!mock) {
+    const { userId } = await auth();
+    if (!userId) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
+    resolvedUserId = userId;
+  } else {
+    // In mock mode, check if public key is stored in headers or resolve from query
+    const url = new URL(req.url);
+    const pubKey = url.searchParams.get('publicKey');
+    if (pubKey) {
+      try {
+        resolvedUserId = await hashPublicKey(pubKey);
+      } catch {
+        resolvedUserId = null;
+      }
+    }
   }
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
-  const artist = await getArtist(userId);
-  const tracks = artist ? await listTracksForArtist(userId) : [];
+
+  if (!resolvedUserId) {
+    // Return all tracks if no specific user resolved
+    const allTracks = await listTracks({ includeRemoved: false });
+    return NextResponse.json({ artist: null, tracks: allTracks });
+  }
+
+  const artist = await getArtist(resolvedUserId);
+  const tracks = artist ? await listTracksForArtist(resolvedUserId) : [];
   return NextResponse.json({ artist, tracks });
 }
