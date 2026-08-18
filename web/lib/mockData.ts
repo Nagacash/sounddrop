@@ -12,6 +12,7 @@ export const mockArtists: Record<string, Artist> = {
     totalDownloads: 5678,
     links: {
       website: 'https://example.com/alex-luna',
+      bandcamp: 'https://alexluna.bandcamp.com',
       spotify: 'https://open.spotify.com/artist/0OdUWJ0sBjDrqHygGUXeCF',
       instagram: 'https://instagram.com/alexluna',
     },

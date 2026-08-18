@@ -40,11 +40,16 @@ export default function ArtistSetupPage() {
   const [policyAccepted, setPolicyAccepted] = useState(false);
   const [displayName, setDisplayName] = useState('');
   const [bio, setBio] = useState('');
+  const [websiteUrl, setWebsiteUrl] = useState('');
+  const [spotifyUrl, setSpotifyUrl] = useState('');
+  const [instagramUrl, setInstagramUrl] = useState('');
+  const [bandcampUrl, setBandcampUrl] = useState('');
   const [trackTitle, setTrackTitle] = useState('');
   const [producers, setProducers] = useState('');
   const [featuring, setFeaturing] = useState('');
   const [myTracks, setMyTracks] = useState<DashTrack[]>([]);
   const [savingId, setSavingId] = useState('');
+  const [deletingId, setDeletingId] = useState('');
   const [profileSlug, setProfileSlug] = useState(initialProfileSlug);
   const [avatarPreview, setAvatarPreview] = useState('');
   const [avatarBusy, setAvatarBusy] = useState(false);
@@ -72,6 +77,10 @@ export default function ArtistSetupPage() {
       if (artist?.slug) rememberProfileSlug(artist.slug);
       if (artist?.display_name && !displayName) setDisplayName(artist.display_name);
       if (artist?.bio && !bio) setBio(artist.bio);
+      if (typeof artist?.website_url === 'string') setWebsiteUrl(artist.website_url);
+      if (typeof artist?.spotify_url === 'string') setSpotifyUrl(artist.spotify_url);
+      if (typeof artist?.instagram_url === 'string') setInstagramUrl(artist.instagram_url);
+      if (typeof artist?.bandcamp_url === 'string') setBandcampUrl(artist.bandcamp_url);
       if (typeof artist?.profile_image_url === 'string' && artist.profile_image_url) {
         setAvatarPreview(`${artist.profile_image_url}?v=${Date.now()}`);
       }
@@ -119,6 +128,10 @@ export default function ArtistSetupPage() {
         publicKey: pb,
         displayName: displayName || user?.fullName || 'Artist',
         bio: bio.trim(),
+        websiteUrl: websiteUrl.trim(),
+        spotifyUrl: spotifyUrl.trim(),
+        instagramUrl: instagramUrl.trim(),
+        bandcampUrl: bandcampUrl.trim(),
         email: user?.primaryEmailAddress?.emailAddress || '',
       }),
     });
@@ -243,6 +256,31 @@ export default function ArtistSetupPage() {
     }
   }
 
+  async function deleteTrack(track: DashTrack) {
+    const ok = window.confirm(
+      `Delete “${track.title || 'this track'}” permanently?\n\nThis removes it from your space and deletes the audio file. This cannot be undone.`,
+    );
+    if (!ok) return;
+
+    setDeletingId(track.id);
+    try {
+      const res = await fetch(`/api/tracks/${encodeURIComponent(track.id)}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ publicKey: pubKey || undefined }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setStatus(`[ DELETE FAILED ] ${JSON.stringify(data)}`);
+        return;
+      }
+      setMyTracks((prev) => prev.filter((x) => x.id !== track.id));
+      setStatus('[ TRACK DELETED ]');
+    } finally {
+      setDeletingId('');
+    }
+  }
+
   async function uploadAvatar(file: File) {
     setAvatarBusy(true);
     setStatus('[ COMPRESSING IMAGE… ]');
@@ -340,6 +378,44 @@ export default function ArtistSetupPage() {
           className="sd-input mt-3 min-h-[6.5rem] resize-y"
         />
         <p className="font-telemetry mt-2 text-[10px] text-sd-muted">{bio.length}/500</p>
+
+        <h2 className="font-telemetry mt-6 text-[11px] text-sd-muted">[ LINKS ]</h2>
+        <p className="mt-2 text-xs text-sd-muted">
+          Optional. Shown on your public profile. Leave blank to hide.
+        </p>
+        <label className="font-telemetry mt-4 block text-[10px] text-sd-muted">WEBSITE</label>
+        <input
+          value={websiteUrl}
+          onChange={(e) => setWebsiteUrl(e.target.value.slice(0, 500))}
+          placeholder="https://yoursite.com"
+          inputMode="url"
+          autoComplete="url"
+          className="sd-input mt-2"
+        />
+        <label className="font-telemetry mt-3 block text-[10px] text-sd-muted">BANDCAMP</label>
+        <input
+          value={bandcampUrl}
+          onChange={(e) => setBandcampUrl(e.target.value.slice(0, 500))}
+          placeholder="https://yourname.bandcamp.com"
+          inputMode="url"
+          className="sd-input mt-2"
+        />
+        <label className="font-telemetry mt-3 block text-[10px] text-sd-muted">SPOTIFY</label>
+        <input
+          value={spotifyUrl}
+          onChange={(e) => setSpotifyUrl(e.target.value.slice(0, 500))}
+          placeholder="https://open.spotify.com/artist/…"
+          inputMode="url"
+          className="sd-input mt-2"
+        />
+        <label className="font-telemetry mt-3 block text-[10px] text-sd-muted">INSTAGRAM</label>
+        <input
+          value={instagramUrl}
+          onChange={(e) => setInstagramUrl(e.target.value.slice(0, 500))}
+          placeholder="https://instagram.com/…"
+          inputMode="url"
+          className="sd-input mt-2"
+        />
 
         <h2 className="font-telemetry mt-6 text-[11px] text-sd-muted">[ PROFILE IMAGE ]</h2>
         <p className="mt-2 text-xs text-sd-muted">
@@ -443,7 +519,7 @@ export default function ArtistSetupPage() {
 
       {myTracks.length > 0 && (
         <section className="sd-panel mt-8 border border-sd-border p-5">
-          <h2 className="font-telemetry text-[11px] text-sd-muted">[ YOUR TRACKS / RENAME ]</h2>
+          <h2 className="font-telemetry text-[11px] text-sd-muted">[ YOUR TRACKS ]</h2>
           <div className="mt-4 flex flex-col gap-6">
             {myTracks.map((t) => (
               <div key={t.id} className="border border-sd-border p-4">
@@ -487,14 +563,24 @@ export default function ArtistSetupPage() {
                   }
                   className="sd-input mt-2"
                 />
-                <button
-                  type="button"
-                  disabled={savingId === t.id}
-                  onClick={() => void saveTrack(t)}
-                  className="sd-btn mt-4"
-                >
-                  {savingId === t.id ? '[ SAVING… ]' : '[ SAVE TRACK ]'}
-                </button>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    disabled={savingId === t.id || deletingId === t.id}
+                    onClick={() => void saveTrack(t)}
+                    className="sd-btn"
+                  >
+                    {savingId === t.id ? '[ SAVING… ]' : '[ SAVE TRACK ]'}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={savingId === t.id || deletingId === t.id}
+                    onClick={() => void deleteTrack(t)}
+                    className="sd-btn border-sd-accent text-sd-accent hover:bg-sd-accent/10"
+                  >
+                    {deletingId === t.id ? '[ DELETING… ]' : '[ DELETE ]'}
+                  </button>
+                </div>
               </div>
             ))}
           </div>

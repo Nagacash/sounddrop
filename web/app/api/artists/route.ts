@@ -4,6 +4,7 @@ import { createClerkClient } from '@clerk/backend';
 import { upsertArtist, getArtist, listTracksForArtist } from '@/lib/db';
 import { isMvpMockMode } from '@/lib/mockMode';
 import { hashPublicKey } from '@/lib/publicKeyHash';
+import { normalizeProfileUrl } from '@/lib/profileLinks';
 
 export async function POST(req: NextRequest) {
   const mock = isMvpMockMode();
@@ -40,11 +41,24 @@ export async function POST(req: NextRequest) {
   const bio =
     typeof body.bio === 'string' ? body.bio.trim().slice(0, 500) : undefined;
 
+  const website_url =
+    body.websiteUrl !== undefined ? normalizeProfileUrl(body.websiteUrl) : undefined;
+  const spotify_url =
+    body.spotifyUrl !== undefined ? normalizeProfileUrl(body.spotifyUrl) : undefined;
+  const instagram_url =
+    body.instagramUrl !== undefined ? normalizeProfileUrl(body.instagramUrl) : undefined;
+  const bandcamp_url =
+    body.bandcampUrl !== undefined ? normalizeProfileUrl(body.bandcampUrl) : undefined;
+
   const artist = await upsertArtist({
     user_id: resolvedUserId,
     email: body.email || '',
     display_name: body.displayName || '',
     bio,
+    website_url,
+    spotify_url,
+    instagram_url,
+    bandcamp_url,
     public_key: publicKey,
     created_at: new Date().toISOString(),
   });

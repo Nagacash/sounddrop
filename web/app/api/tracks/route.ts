@@ -148,7 +148,13 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error('[tracks] audio store failed', err);
     return NextResponse.json(
-      { error: 'audio_store_failed', detail: err instanceof Error ? err.message : 'unknown' },
+      {
+        error: 'audio_store_failed',
+        detail:
+          err instanceof Error
+            ? err.message
+            : 'Could not store MP3. Check SUPABASE_SECRET_KEY on Vercel.',
+      },
       { status: 500 },
     );
   }

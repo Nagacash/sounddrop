@@ -14,6 +14,7 @@ const ITEMS: Array<{
   icon: ReactNode;
 }> = [
   { key: 'website', label: 'Website', icon: <WebIcon /> },
+  { key: 'bandcamp', label: 'Bandcamp', icon: <BandcampIcon /> },
   { key: 'spotify', label: 'Spotify', icon: <SpotifyIcon /> },
   { key: 'instagram', label: 'Instagram', icon: <InstagramIcon /> },
 ];
@@ -69,6 +70,14 @@ function InstagramIcon() {
       <rect x="3" y="3" width="18" height="18" rx="0" stroke="currentColor" strokeWidth="1.8" />
       <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="1.8" />
       <circle cx="17.5" cy="6.5" r="1" fill="currentColor" />
+    </svg>
+  );
+}
+
+function BandcampIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M0 18.75l7.14-13.5H24l-7.14 13.5H0z" />
     </svg>
   );
 }

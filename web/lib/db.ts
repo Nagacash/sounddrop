@@ -18,6 +18,10 @@ export type Artist = {
   slug: string;
   bio: string;
   profile_image_url: string;
+  website_url: string;
+  spotify_url: string;
+  instagram_url: string;
+  bandcamp_url: string;
   public_key: string;
   created_at: string;
 };
@@ -86,6 +90,10 @@ function mapArtist(row: typeof artists.$inferSelect): Artist {
     slug: row.slug || '',
     bio: row.bio || '',
     profile_image_url: row.profile_image_url || '',
+    website_url: row.website_url || '',
+    spotify_url: row.spotify_url || '',
+    instagram_url: row.instagram_url || '',
+    bandcamp_url: row.bandcamp_url || '',
     public_key: row.public_key,
     created_at: iso(row.created_at),
   };
@@ -182,10 +190,23 @@ function writeAll(data: DbShape) {
 /* ---------------- Public API ---------------- */
 
 export async function upsertArtist(
-  a: Omit<Artist, 'slug' | 'bio' | 'profile_image_url'> & {
+  a: Omit<
+    Artist,
+    | 'slug'
+    | 'bio'
+    | 'profile_image_url'
+    | 'website_url'
+    | 'spotify_url'
+    | 'instagram_url'
+    | 'bandcamp_url'
+  > & {
     slug?: string;
     bio?: string;
     profile_image_url?: string;
+    website_url?: string;
+    spotify_url?: string;
+    instagram_url?: string;
+    bandcamp_url?: string;
   },
 ) {
   const existing = await getArtist(a.user_id);
@@ -195,7 +216,20 @@ export async function upsertArtist(
   const bio = (a.bio ?? existing?.bio ?? '').trim();
   const profile_image_url =
     a.profile_image_url ?? existing?.profile_image_url ?? '';
-  const row: Artist = { ...a, slug, bio, profile_image_url };
+  const website_url = a.website_url ?? existing?.website_url ?? '';
+  const spotify_url = a.spotify_url ?? existing?.spotify_url ?? '';
+  const instagram_url = a.instagram_url ?? existing?.instagram_url ?? '';
+  const bandcamp_url = a.bandcamp_url ?? existing?.bandcamp_url ?? '';
+  const row: Artist = {
+    ...a,
+    slug,
+    bio,
+    profile_image_url,
+    website_url,
+    spotify_url,
+    instagram_url,
+    bandcamp_url,
+  };
 
   if (!useNeon()) {
     const d = readAll();
@@ -216,6 +250,10 @@ export async function upsertArtist(
       slug: row.slug,
       bio: row.bio || null,
       profile_image_url: row.profile_image_url || null,
+      website_url: row.website_url || null,
+      spotify_url: row.spotify_url || null,
+      instagram_url: row.instagram_url || null,
+      bandcamp_url: row.bandcamp_url || null,
       public_key: row.public_key,
       created_at: new Date(row.created_at),
     })
@@ -227,6 +265,10 @@ export async function upsertArtist(
         slug: row.slug,
         bio: row.bio || null,
         profile_image_url: row.profile_image_url || null,
+        website_url: row.website_url || null,
+        spotify_url: row.spotify_url || null,
+        instagram_url: row.instagram_url || null,
+        bandcamp_url: row.bandcamp_url || null,
         public_key: row.public_key,
       },
     });

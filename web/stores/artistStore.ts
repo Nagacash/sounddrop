@@ -19,6 +19,7 @@ export interface ArtistLinks {
   website?: string;
   spotify?: string;
   instagram?: string;
+  bandcamp?: string;
 }
 
 export interface Artist {

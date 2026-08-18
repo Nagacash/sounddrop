@@ -58,6 +58,12 @@ async function toPublicArtist(
     profileImageUrl: artist.profile_image_url || DEFAULT_PROFILE_IMAGE,
     followerCount: 0,
     totalDownloads: 0,
+    links: {
+      website: artist.website_url || undefined,
+      spotify: artist.spotify_url || undefined,
+      instagram: artist.instagram_url || undefined,
+      bandcamp: artist.bandcamp_url || undefined,
+    },
     tracks,
   };
 }
