@@ -28,7 +28,7 @@ export default function ArtistTrackList({
   artistName,
 }: ArtistTrackListProps) {
   const listRef = useRef<HTMLDivElement>(null);
-  const { currentTrack, isPlaying, playTrack } = usePlayerStore();
+  const { currentTrack, isPlaying, playTrack, playQueue } = usePlayerStore();
   const [downloadTrack, setDownloadTrack] = useState<Track | null>(null);
 
   useEffect(() => {
@@ -36,22 +36,46 @@ export default function ArtistTrackList({
     if (!root) return;
     const reduce = prefersReducedMotion();
     const rows = root.querySelectorAll('[data-track-row]');
+    // Never leave rows stuck at opacity 0 (GSAP revert used to hide all but the first).
+    rows.forEach((row) => {
+      (row as HTMLElement).style.opacity = '1';
+    });
+    if (reduce || rows.length === 0) return;
+
     const ctx = gsap.context(() => {
       gsap.fromTo(
         rows,
-        { opacity: 0 },
+        { opacity: 0.35 },
         {
           opacity: 1,
-          duration: reduce ? 0.12 : 0.35,
-          stagger: reduce ? 0 : 0.04,
+          duration: 0.3,
+          stagger: 0.03,
           ease: 'power2.out',
           overwrite: true,
           clearProps: 'opacity',
         },
       );
     }, root);
-    return () => ctx.revert();
+    return () => {
+      ctx.revert();
+      rows.forEach((row) => {
+        (row as HTMLElement).style.opacity = '1';
+      });
+    };
   }, [publicKeyHash, tracks.length]);
+
+  function toPlayerTrack(track: Track) {
+    return { ...track, artistName, publicKeyHash };
+  }
+
+  function playFromList(track: Track) {
+    playTrack(toPlayerTrack(track), { queue: tracks.map(toPlayerTrack) });
+  }
+
+  function playAll() {
+    if (!tracks.length) return;
+    playQueue(tracks.map(toPlayerTrack), 0);
+  }
 
   return (
     <section className="relative bg-sd-bg px-5 pb-10 pt-12 sm:px-10 lg:px-16">
@@ -61,9 +85,20 @@ export default function ArtistTrackList({
             <p className="font-telemetry text-xs text-sd-muted">[ DISCOGRAPHY ]</p>
             <h2 className="font-display mt-2 text-2xl text-white sm:text-3xl">Tracks</h2>
           </div>
-          <p className="font-telemetry text-xs tabular-nums text-white/45">
-            {tracks.length.toString().padStart(2, '0')} RELEASES
-          </p>
+          <div className="flex flex-col items-end gap-2">
+            <p className="font-telemetry text-xs tabular-nums text-white/45">
+              {tracks.length.toString().padStart(2, '0')} RELEASES
+            </p>
+            {tracks.length > 1 ? (
+              <button
+                type="button"
+                onClick={playAll}
+                className="font-telemetry cursor-pointer text-[0.6875rem] tracking-widest text-sd-accent transition-colors duration-fast hover:text-white"
+              >
+                [ PLAY ALL ]
+              </button>
+            ) : null}
+          </div>
         </div>
 
         <div ref={listRef} className="border border-sd-border bg-sd-border">
