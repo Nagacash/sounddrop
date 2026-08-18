@@ -117,7 +117,7 @@ export default function ArtistTrackList({
               >
                 <button
                   type="button"
-                  onClick={() => playTrack({ ...track, artistName, publicKeyHash })}
+                  onClick={() => playFromList(track)}
                   className="relative flex h-11 w-11 cursor-pointer items-center justify-center text-sm text-white/35 transition-colors duration-fast hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sd-accent"
                   aria-label={playing ? `Pause ${track.title}` : `Play ${track.title}`}
                 >
@@ -148,7 +148,7 @@ export default function ArtistTrackList({
 
                 <button
                   type="button"
-                  onClick={() => playTrack({ ...track, artistName, publicKeyHash })}
+                  onClick={() => playFromList(track)}
                   className="min-w-0 cursor-pointer text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sd-accent"
                 >
                   <p

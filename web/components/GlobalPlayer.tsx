@@ -16,7 +16,11 @@ export default function GlobalPlayer() {
     duration,
     volume,
     isMuted,
+    queue,
+    queueIndex,
     togglePlay,
+    playNext,
+    playPrev,
     setIsPlaying,
     setCurrentTime,
     setDuration,
@@ -63,8 +67,20 @@ export default function GlobalPlayer() {
     audio.volume = isMuted ? 0 : volume;
   }, [volume, isMuted]);
 
+  // When seek resets to 0 after prev within first 3s, sync audio element.
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio || !currentTrack) return;
+    if (currentTime === 0 && audio.currentTime > 0.25) {
+      audio.currentTime = 0;
+    }
+  }, [currentTime, currentTrack]);
+
   const total = duration || currentTrack?.duration || 0;
   const progress = total > 0 ? Math.min(1, currentTime / total) : 0;
+  const hasQueue = queue.length > 1;
+  const queueLabel =
+    hasQueue && queueIndex >= 0 ? `${queueIndex + 1}/${queue.length}` : null;
 
   return (
     <>
@@ -78,12 +94,11 @@ export default function GlobalPlayer() {
         onTimeUpdate={() => {
           if (audioRef.current) setCurrentTime(audioRef.current.currentTime);
         }}
-        onEnded={() => setIsPlaying(false)}
+        onEnded={() => playNext()}
       />
 
       {currentTrack && (
         <div className="fixed inset-x-0 bottom-0 z-modal border-t border-sd-border bg-sd-bg/95 backdrop-blur-sm">
-          {/* Progress rail — BeatStars-style full-width scrub cue */}
           <div className="relative h-1 w-full bg-sd-border" aria-hidden>
             <div
               className="absolute inset-y-0 left-0 bg-sd-accent"
@@ -104,6 +119,18 @@ export default function GlobalPlayer() {
                 />
               </div>
             ) : null}
+
+            {hasQueue ? (
+              <button
+                type="button"
+                onClick={playPrev}
+                className="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center text-white/55 transition-colors duration-fast hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sd-accent"
+                aria-label="Previous track"
+              >
+                <PrevIcon />
+              </button>
+            ) : null}
+
             <button
               type="button"
               onClick={togglePlay}
@@ -113,9 +140,25 @@ export default function GlobalPlayer() {
               {isPlaying ? <PauseIcon /> : <PlayIcon />}
             </button>
 
+            {hasQueue ? (
+              <button
+                type="button"
+                onClick={playNext}
+                className="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center text-white/55 transition-colors duration-fast hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sd-accent"
+                aria-label="Next track"
+              >
+                <NextIcon />
+              </button>
+            ) : null}
+
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold leading-snug text-white sm:text-base">
                 {currentTrack.title}
+                {queueLabel ? (
+                  <span className="ml-2 font-telemetry text-[0.65rem] font-normal tracking-widest text-white/40">
+                    {queueLabel}
+                  </span>
+                ) : null}
               </p>
               <p className="truncate text-sm text-white/50">
                 {currentTrack.publicKeyHash ? (
@@ -182,6 +225,22 @@ function PauseIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
       <path d="M7 5h3.5v14H7V5zm6.5 0H17v14h-3.5V5z" />
+    </svg>
+  );
+}
+
+function PrevIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M6 6h2v12H6V6zm3.5 6 8.5 6V6l-8.5 6z" />
+    </svg>
+  );
+}
+
+function NextIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M16 6h2v12h-2V6zM5 18l8.5-6L5 6v12z" />
     </svg>
   );
 }

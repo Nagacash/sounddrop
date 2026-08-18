@@ -202,24 +202,71 @@ export default function ArtistSetupPage() {
     return true;
   }
 
+  async function uploadOne(
+    f: File,
+    opts: {
+      pk: string;
+      pb: string;
+      title: string;
+      coverBlob: Blob | null;
+      producers: string;
+      featuring: string;
+      recordLabel: string;
+    },
+  ) {
+    const buf = await f.arrayBuffer();
+    const cid = await computeCID(buf);
+    const defaultTitle = f.name.replace(/\.mp3$/i, '');
+    const title = opts.title.trim() || defaultTitle;
+    const meta = {
+      name: f.name,
+      size: f.size,
+      type: f.type || 'audio/mpeg',
+      cid,
+      ts: new Date().toISOString(),
+      title,
+    };
+    const signature = await signMeta(meta, opts.pk);
+    const fd = new FormData();
+    fd.append('file', f);
+    fd.append('meta', JSON.stringify(meta));
+    fd.append('signature', signature);
+    fd.append('publicKey', opts.pb);
+    fd.append('artistDisplayName', displayName || user?.fullName || 'Artist');
+    fd.append('title', title);
+    fd.append('producers', opts.producers);
+    fd.append('featuring', opts.featuring);
+    fd.append('recordLabel', opts.recordLabel);
+    if (opts.coverBlob) {
+      fd.append('cover', new File([opts.coverBlob], 'cover.jpg', { type: 'image/jpeg' }));
+    }
+    const res = await fetch('/api/tracks', { method: 'POST', body: fd });
+    const data = await res.json().catch(() => ({}));
+    return { res, data, title };
+  }
+
   async function upload() {
     if (!policyAccepted) {
       setStatus('[ ACCEPT CONTENT POLICY BEFORE UPLOAD ]');
       return;
     }
-    const f = fileRef.current?.files?.[0];
-    if (!f) {
-      setStatus('[ SELECT MP3 FILE ]');
-      return;
-    }
-    if (f.type !== 'audio/mpeg' && !f.name.toLowerCase().endsWith('.mp3')) {
-      setStatus('[ MP3 ONLY ]');
+    const files = Array.from(fileRef.current?.files || []);
+    if (!files.length) {
+      setStatus('[ SELECT MP3 FILE(S) ]');
       return;
     }
 
-    if (f.size > AUDIO_MAX_BYTES) {
-      setStatus(`[ MP3 TOO LARGE ] Max ${Math.round(AUDIO_MAX_BYTES / (1024 * 1024))}MB`);
-      return;
+    for (const f of files) {
+      if (f.type !== 'audio/mpeg' && !f.name.toLowerCase().endsWith('.mp3')) {
+        setStatus(`[ MP3 ONLY ] ${f.name}`);
+        return;
+      }
+      if (f.size > AUDIO_MAX_BYTES) {
+        setStatus(
+          `[ MP3 TOO LARGE ] ${f.name} — max ${Math.round(AUDIO_MAX_BYTES / (1024 * 1024))}MB`,
+        );
+        return;
+      }
     }
 
     localStorage.setItem(POLICY_KEY, new Date().toISOString());
@@ -232,21 +279,6 @@ export default function ArtistSetupPage() {
       return;
     }
 
-    setStage('[ READING FILE ]');
-    const buf = await f.arrayBuffer();
-    setStage('[ HASHING / CID ]');
-    const cid = await computeCID(buf);
-    const defaultTitle = f.name.replace(/\.mp3$/i, '');
-    const meta = {
-      name: f.name,
-      size: f.size,
-      type: f.type || 'audio/mpeg',
-      cid,
-      ts: new Date().toISOString(),
-      title: trackTitle.trim() || defaultTitle,
-    };
-    setStage('[ SIGNING / ED25519 ]');
-    const signature = await signMeta(meta, pk);
     setStage('[ PREPARING COVER ]');
     let coverBlob: Blob | null = null;
     const coverFile = coverRef.current?.files?.[0];
@@ -260,45 +292,65 @@ export default function ArtistSetupPage() {
         return;
       }
     }
-    setStage('[ UPLOADING / STORING AUDIO ]');
-    const fd = new FormData();
-    fd.append('file', f);
-    fd.append('meta', JSON.stringify(meta));
-    fd.append('signature', signature);
-    fd.append('publicKey', pb);
-    fd.append('artistDisplayName', displayName || user?.fullName || 'Artist');
-    fd.append('title', trackTitle.trim() || defaultTitle);
-    fd.append('producers', producers.trim());
-    fd.append('featuring', featuring.trim());
-    fd.append('recordLabel', recordLabel.trim());
-    if (coverBlob) {
-      fd.append('cover', new File([coverBlob], 'cover.jpg', { type: 'image/jpeg' }));
+    const sharedTitle = files.length === 1 ? trackTitle.trim() : '';
+    const okTitles: string[] = [];
+    const failMessages: string[] = [];
+    let lastSlug = profileSlug;
+
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i];
+      setStage(`[ UPLOADING ${i + 1}/${files.length} ] ${f.name}`);
+      try {
+        const { res, data, title } = await uploadOne(f, {
+          pk,
+          pb,
+          title: sharedTitle,
+          // Cover only on the first file when batching.
+          coverBlob: i === 0 ? coverBlob : null,
+          producers: producers.trim(),
+          featuring: featuring.trim(),
+          recordLabel: recordLabel.trim(),
+        });
+        if (res.ok) {
+          okTitles.push(title);
+          const slug =
+            (typeof data.slug === 'string' && data.slug) ||
+            (typeof data.publicKeyHash === 'string' && data.publicKeyHash) ||
+            lastSlug;
+          if (slug) {
+            lastSlug = slug;
+            rememberProfileSlug(slug);
+          }
+          if (data.warning) failMessages.push(`${title}: ${data.warning}`);
+        } else {
+          failMessages.push(`${f.name}: ${JSON.stringify(data)}`);
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'failed';
+        failMessages.push(`${f.name}: ${msg}`);
+      }
     }
-    const res = await fetch('/api/tracks', { method: 'POST', body: fd });
-    const data = await res.json();
+
     setStage('');
-    if (res.ok) {
-      const slug =
-        (typeof data.slug === 'string' && data.slug) ||
-        (typeof data.publicKeyHash === 'string' && data.publicKeyHash) ||
-        profileSlug;
-      if (slug) rememberProfileSlug(slug);
-      const warn = data.warning ? ` · ${data.warning}` : '';
-      setStatus(`[ TRACK READY ] Re-upload fixed playback if needed.${warn}`);
-      setTrackTitle('');
-      setProducers('');
-      setFeaturing('');
-      setRecordLabel('');
-      setCoverPreview('');
-      if (fileRef.current) fileRef.current.value = '';
-      if (coverRef.current) coverRef.current.value = '';
-      await loadMyTracks();
-      if (slug) {
-        // Give a beat to see success, then open the space.
-        window.setTimeout(() => goToSpace(slug), 600);
+    setTrackTitle('');
+    setProducers('');
+    setFeaturing('');
+    setRecordLabel('');
+    setCoverPreview('');
+    if (fileRef.current) fileRef.current.value = '';
+    if (coverRef.current) coverRef.current.value = '';
+    await loadMyTracks();
+
+    if (okTitles.length) {
+      const warn = failMessages.length ? ` · Issues: ${failMessages.join(' · ')}` : '';
+      setStatus(
+        `[ ${okTitles.length} TRACK${okTitles.length === 1 ? '' : 'S'} READY ] ${okTitles.join(', ')}${warn}`,
+      );
+      if (lastSlug && okTitles.length === files.length) {
+        window.setTimeout(() => goToSpace(lastSlug), 600);
       }
     } else {
-      setStatus(`[ REJECTED ] ${JSON.stringify(data)}`);
+      setStatus(`[ REJECTED ] ${failMessages.join(' · ') || 'upload failed'}`);
     }
   }
 
@@ -722,13 +774,18 @@ export default function ArtistSetupPage() {
         />
 
         <label className="font-telemetry mt-4 block text-[10px] text-sd-muted" htmlFor="track-mp3">
-          MP3 FILE
+          MP3 FILE(S)
         </label>
+        <p className="mt-1 text-xs text-sd-muted">
+          Select one or many MP3s. Each file becomes its own release. When batching, titles come from
+          filenames; the optional title field above is used only for a single file.
+        </p>
         <input
           id="track-mp3"
           ref={fileRef}
           type="file"
           accept="audio/mpeg,.mp3"
+          multiple
           className="font-telemetry mt-2 block w-full text-xs text-sd-muted file:mr-4 file:border file:border-sd-border file:bg-sd-bg file:px-3 file:py-2 file:text-[10px] file:uppercase file:tracking-widest file:text-sd-text"
         />
         <button type="button" onClick={handleUploadClick} className="sd-btn mt-4">

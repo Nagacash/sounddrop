@@ -31,6 +31,16 @@ export default function ArtistProfile({ artist }: ArtistProfileProps) {
     artist.signedReleaseCount ?? artist.tracks.filter((t) => t.verified).length;
   const keyShort = artist.publicKeyHash.slice(0, 8);
 
+  function playHero() {
+    if (!firstTrack) return;
+    const queue = artist.tracks.map((t) => ({
+      ...t,
+      artistName: artist.displayName,
+      publicKeyHash: artist.publicKeyHash,
+    }));
+    playTrack(queue[0], { queue });
+  }
+
   useEffect(() => {
     const root = rootRef.current;
     if (!root) return;
@@ -138,18 +148,12 @@ export default function ArtistProfile({ artist }: ArtistProfileProps) {
           {firstTrack && (
             <button
               type="button"
-              onClick={() =>
-                playTrack({
-                  ...firstTrack,
-                  artistName: artist.displayName,
-                  publicKeyHash: artist.publicKeyHash,
-                })
-              }
+              onClick={playHero}
               className="inline-flex min-h-12 min-w-12 cursor-pointer items-center justify-center gap-2 bg-sd-accent px-7 text-sm font-bold uppercase tracking-[0.08em] text-white transition-colors duration-fast ease-out hover:bg-sd-accent-hot focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sd-accent"
-              aria-label={playingFirst ? 'Pause' : 'Play'}
+              aria-label={playingFirst ? 'Pause' : 'Play all'}
             >
               {playingFirst ? <PauseIcon /> : <PlayIcon />}
-              {playingFirst ? 'Pause' : 'Play'}
+              {playingFirst ? 'Pause' : artist.tracks.length > 1 ? 'Play all' : 'Play'}
             </button>
           )}
           <button
