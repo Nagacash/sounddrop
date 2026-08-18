@@ -241,7 +241,21 @@ export default function ArtistSetupPage() {
       fd.append('cover', new File([opts.coverBlob], 'cover.jpg', { type: 'image/jpeg' }));
     }
     const res = await fetch('/api/tracks', { method: 'POST', body: fd });
-    const data = await res.json().catch(() => ({}));
+    const raw = await res.text();
+    let data: Record<string, unknown> = {};
+    if (raw) {
+      try {
+        data = JSON.parse(raw) as Record<string, unknown>;
+      } catch {
+        data = { error: 'upload_failed', detail: raw.slice(0, 180), status: res.status };
+      }
+    } else if (!res.ok) {
+      data = {
+        error: 'upload_failed',
+        detail: res.statusText || 'empty response',
+        status: res.status,
+      };
+    }
     return { res, data, title };
   }
 
@@ -323,7 +337,11 @@ export default function ArtistSetupPage() {
           }
           if (data.warning) failMessages.push(`${title}: ${data.warning}`);
         } else {
-          failMessages.push(`${f.name}: ${JSON.stringify(data)}`);
+          const detail =
+            (typeof data.detail === 'string' && data.detail) ||
+            (typeof data.error === 'string' && data.error) ||
+            JSON.stringify(data);
+          failMessages.push(`${f.name}: ${detail}${data.status ? ` (${data.status})` : ''}`);
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'failed';

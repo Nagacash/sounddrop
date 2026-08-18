@@ -7,6 +7,14 @@ const webpackCacheDirectory = path.join(os.tmpdir(), "sounddrop-webpack-cache");
 const nextConfig: NextConfig = {
   // Allow Next 16 default Turbopack builds alongside the webpack() hook used by `next dev --webpack`.
   turbopack: {},
+  experimental: {
+    // proxy.ts buffers every matched body (default 10MB) and truncates the rest.
+    // Track uploads allow 12MB MP3s plus cover/form fields.
+    proxyClientMaxBodySize: '16mb',
+  },
+  serverActions: {
+    bodySizeLimit: '16mb',
+  },
   images: {
     remotePatterns: [
       {

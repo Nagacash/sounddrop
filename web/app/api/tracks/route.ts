@@ -11,6 +11,8 @@ import { hashPublicKey } from '@/lib/publicKeyHash';
 import { AUDIO_MAX_BYTES, COVER_MAX_BYTES, COVER_MIME } from '@/lib/mediaLimits';
 import { takeRateLimit } from '@/lib/rateLimit';
 
+export const maxDuration = 60;
+
 function isMp3(file: Blob, name: string) {
   return file.type === 'audio/mpeg' || name.toLowerCase().endsWith('.mp3');
 }
@@ -26,6 +28,21 @@ function isUploadBlob(value: unknown): value is Blob {
 }
 
 export async function POST(req: NextRequest) {
+  try {
+    return await postTrack(req);
+  } catch (err) {
+    console.error('[tracks] unhandled post error', err);
+    return NextResponse.json(
+      {
+        error: 'upload_failed',
+        detail: err instanceof Error ? err.message : 'Could not complete upload',
+      },
+      { status: 500 },
+    );
+  }
+}
+
+async function postTrack(req: NextRequest) {
   const mock = isMvpMockMode();
   let userId: string | null = null;
 
@@ -68,7 +85,7 @@ export async function POST(req: NextRequest) {
     typeof form.get('featuring') === 'string' ? String(form.get('featuring')).trim().slice(0, 200) : '';
 
   if (
-    !(file instanceof Blob) ||
+    !isUploadBlob(file) ||
     typeof metaRaw !== 'string' ||
     typeof signature !== 'string' ||
     typeof publicKey !== 'string'
@@ -229,22 +246,34 @@ export async function POST(req: NextRequest) {
     (typeof meta.title === 'string' ? meta.title.trim() : '') ||
     String(meta.name).replace(/\.mp3$/i, '');
 
-  const track = await insertTrack({
-    id: realCid,
-    artist_id: artistId,
-    title: displayTitle.slice(0, 120),
-    name: String(meta.name),
-    size: Number(meta.size),
-    type: typeof meta.type === 'string' ? meta.type : 'audio/mpeg',
-    cid: realCid,
-    signature,
-    public_key: publicKey,
-    storage_url: storageUrl,
-    cover_url: coverUrl,
-    producers: producers || null,
-    featuring: featuring || null,
-    created_at: new Date().toISOString(),
-  });
+  let track;
+  try {
+    track = await insertTrack({
+      id: realCid,
+      artist_id: artistId,
+      title: displayTitle.slice(0, 120),
+      name: String(meta.name),
+      size: Number(meta.size),
+      type: typeof meta.type === 'string' ? meta.type : 'audio/mpeg',
+      cid: realCid,
+      signature,
+      public_key: publicKey,
+      storage_url: storageUrl,
+      cover_url: coverUrl,
+      producers: producers || null,
+      featuring: featuring || null,
+      created_at: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.error('[tracks] insert failed', err);
+    return NextResponse.json(
+      {
+        error: 'track_save_failed',
+        detail: err instanceof Error ? err.message : 'Could not save track',
+      },
+      { status: 500 },
+    );
+  }
 
   const artistRow = await getArtist(artistId);
 

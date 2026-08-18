@@ -6,7 +6,22 @@ import { updateSession } from '@/utils/supabase/middleware';
 
 const clerkHandler = clerkMiddleware();
 
+function isMediaUpload(req: NextRequest) {
+  if (req.method !== 'POST') return false;
+  const path = req.nextUrl.pathname;
+  return (
+    path === '/api/tracks' ||
+    path === '/api/artists/avatar' ||
+    path.endsWith('/cover')
+  );
+}
+
 export default async function proxy(req: NextRequest, ev: NextFetchEvent) {
+  // Large multipart bodies must not be cloned by proxy (10MB default truncate).
+  if (isMediaUpload(req)) {
+    return NextResponse.next();
+  }
+
   // Keep Supabase auth cookies fresh on every matched request.
   const supabaseResponse = await updateSession(req);
 
