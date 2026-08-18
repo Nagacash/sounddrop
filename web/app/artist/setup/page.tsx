@@ -50,6 +50,7 @@ export default function ArtistSetupPage() {
   const [trackTitle, setTrackTitle] = useState('');
   const [producers, setProducers] = useState('');
   const [featuring, setFeaturing] = useState('');
+  const [recordLabel, setRecordLabel] = useState('');
   const [myTracks, setMyTracks] = useState<DashTrack[]>([]);
   const [savingId, setSavingId] = useState('');
   const [deletingId, setDeletingId] = useState('');
@@ -226,6 +227,7 @@ export default function ArtistSetupPage() {
     fd.append('title', trackTitle.trim() || defaultTitle);
     fd.append('producers', producers.trim());
     fd.append('featuring', featuring.trim());
+    fd.append('recordLabel', recordLabel.trim());
     if (coverBlob) {
       fd.append('cover', new File([coverBlob], 'cover.jpg', { type: 'image/jpeg' }));
     }
@@ -243,6 +245,7 @@ export default function ArtistSetupPage() {
       setTrackTitle('');
       setProducers('');
       setFeaturing('');
+      setRecordLabel('');
       setCoverPreview('');
       if (fileRef.current) fileRef.current.value = '';
       if (coverRef.current) coverRef.current.value = '';
@@ -259,6 +262,7 @@ export default function ArtistSetupPage() {
   async function saveTrack(track: DashTrack) {
     setSavingId(track.id);
     try {
+      const activePubKey = pubKey || (typeof window !== 'undefined' ? localStorage.getItem('sd_pub') || '' : '');
       const res = await fetch(`/api/tracks/${encodeURIComponent(track.id)}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -266,7 +270,7 @@ export default function ArtistSetupPage() {
           title: track.title,
           producers: track.producers || '',
           featuring: track.featuring || '',
-          publicKey: pubKey || undefined,
+          publicKey: activePubKey || undefined,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -617,6 +621,17 @@ export default function ArtistSetupPage() {
           value={featuring}
           onChange={(e) => setFeaturing(e.target.value.slice(0, 200))}
           placeholder="e.g. Guest Artist"
+          className="sd-input mt-2"
+        />
+
+        <label className="font-telemetry mt-4 block text-[10px] text-sd-muted" htmlFor="track-label">
+          RECORDS LABEL (OPTIONAL)
+        </label>
+        <input
+          id="track-label"
+          value={recordLabel}
+          onChange={(e) => setRecordLabel(e.target.value.slice(0, 200))}
+          placeholder="e.g. Independent, OVO, Def Jam"
           className="sd-input mt-2"
         />
 
