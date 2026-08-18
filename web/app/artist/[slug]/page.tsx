@@ -19,6 +19,9 @@ export default async function ArtistSpacePage({ params }: Props) {
         <div className="mx-auto max-w-5xl border-t border-white/10 pt-10">
           <p className="font-telemetry text-[11px] tracking-widest text-sd-muted">[ ABOUT ]</p>
           <h2 className="font-display mt-3 text-2xl text-white sm:text-3xl">Bio</h2>
+          {artist.location ? (
+            <p className="mt-3 text-sm text-white/50">{artist.location}</p>
+          ) : null}
           <p className="text-pretty mt-5 max-w-2xl text-base leading-relaxed text-white/70 sm:text-lg">
             {artist.bio}
           </p>

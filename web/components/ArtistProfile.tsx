@@ -27,6 +27,9 @@ export default function ArtistProfile({ artist }: ArtistProfileProps) {
   const firstTrack = artist.tracks[0];
   const playingFirst =
     !!firstTrack && currentTrack?.id === firstTrack.id && isPlaying;
+  const signedCount =
+    artist.signedReleaseCount ?? artist.tracks.filter((t) => t.verified).length;
+  const keyShort = artist.publicKeyHash.slice(0, 8);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -107,10 +110,15 @@ export default function ArtistProfile({ artist }: ArtistProfileProps) {
         <div className="max-w-5xl">
           <p
             data-hero-meta
-            className="mb-4 inline-flex items-center gap-2 text-sm font-medium text-sd-text"
+            className="mb-4 inline-flex flex-wrap items-center gap-x-3 gap-y-1 text-sm font-medium text-sd-text"
           >
-            <VerifiedMark />
-            <span>Artist-owned space</span>
+            <span className="inline-flex items-center gap-2">
+              <VerifiedMark />
+              <span>Artist-owned · Ed25519 signed</span>
+            </span>
+            {artist.location ? (
+              <span className="text-white/55">· {artist.location}</span>
+            ) : null}
           </p>
 
           <h1
@@ -127,9 +135,10 @@ export default function ArtistProfile({ artist }: ArtistProfileProps) {
             {artist.bio}
           </p>
 
-          <p data-hero-meta className="mt-5 text-sm text-white/55">
-            {artist.followerCount.toLocaleString()} fans · {artist.totalDownloads.toLocaleString()}{' '}
-            plays · {artist.tracks.length} releases
+          <p data-hero-meta className="mt-5 font-telemetry text-[11px] tracking-widest text-white/50">
+            {signedCount} signed release{signedCount === 1 ? '' : 's'}
+            {' · '}
+            key {keyShort}…
           </p>
 
           <div data-hero-meta className="mt-6">

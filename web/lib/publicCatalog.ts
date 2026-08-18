@@ -55,9 +55,11 @@ async function toPublicArtist(
     bio:
       artist.bio?.trim() ||
       'Artist-owned sound. Cryptographically verified.',
+    location: artist.location?.trim() || undefined,
     profileImageUrl: artist.profile_image_url || DEFAULT_PROFILE_IMAGE,
     followerCount: 0,
     totalDownloads: 0,
+    signedReleaseCount: tracks.filter((t) => t.verified).length,
     links: {
       website: artist.website_url || undefined,
       spotify: artist.spotify_url || undefined,

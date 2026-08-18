@@ -6,6 +6,7 @@ export const mockArtists: Record<string, Artist> = {
     publicKeyHash: 'artist-001',
     displayName: 'Alex Luna',
     bio: 'Electronic music producer from Berlin. Owner of my sound.',
+    location: 'Berlin',
     profileImageUrl:
       'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=1600&h=1000&fit=crop&q=80',
     followerCount: 1234,
@@ -59,6 +60,7 @@ export const mockArtists: Record<string, Artist> = {
     publicKeyHash: 'artist-002',
     displayName: 'Maya Beats',
     bio: 'Hip-hop & soul. Independent. DM for collabs.',
+    location: 'Lagos',
     profileImageUrl:
       'https://images.unsplash.com/photo-1511379938547-c1f69b13d835?w=1600&h=1000&fit=crop&q=80',
     followerCount: 2345,

@@ -49,6 +49,12 @@ export async function POST(req: NextRequest) {
     body.instagramUrl !== undefined ? normalizeProfileUrl(body.instagramUrl) : undefined;
   const bandcamp_url =
     body.bandcampUrl !== undefined ? normalizeProfileUrl(body.bandcampUrl) : undefined;
+  const location =
+    body.location !== undefined
+      ? String(body.location || '')
+          .trim()
+          .slice(0, 80)
+      : undefined;
 
   const artist = await upsertArtist({
     user_id: resolvedUserId,
@@ -59,6 +65,7 @@ export async function POST(req: NextRequest) {
     spotify_url,
     instagram_url,
     bandcamp_url,
+    location,
     public_key: publicKey,
     created_at: new Date().toISOString(),
   });

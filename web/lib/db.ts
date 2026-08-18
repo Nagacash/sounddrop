@@ -22,6 +22,7 @@ export type Artist = {
   spotify_url: string;
   instagram_url: string;
   bandcamp_url: string;
+  location: string;
   public_key: string;
   created_at: string;
 };
@@ -94,6 +95,7 @@ function mapArtist(row: typeof artists.$inferSelect): Artist {
     spotify_url: row.spotify_url || '',
     instagram_url: row.instagram_url || '',
     bandcamp_url: row.bandcamp_url || '',
+    location: row.location || '',
     public_key: row.public_key,
     created_at: iso(row.created_at),
   };
@@ -199,6 +201,7 @@ export async function upsertArtist(
     | 'spotify_url'
     | 'instagram_url'
     | 'bandcamp_url'
+    | 'location'
   > & {
     slug?: string;
     bio?: string;
@@ -207,6 +210,7 @@ export async function upsertArtist(
     spotify_url?: string;
     instagram_url?: string;
     bandcamp_url?: string;
+    location?: string;
   },
 ) {
   const existing = await getArtist(a.user_id);
@@ -220,6 +224,7 @@ export async function upsertArtist(
   const spotify_url = a.spotify_url ?? existing?.spotify_url ?? '';
   const instagram_url = a.instagram_url ?? existing?.instagram_url ?? '';
   const bandcamp_url = a.bandcamp_url ?? existing?.bandcamp_url ?? '';
+  const location = (a.location ?? existing?.location ?? '').trim().slice(0, 80);
   const row: Artist = {
     ...a,
     slug,
@@ -229,6 +234,7 @@ export async function upsertArtist(
     spotify_url,
     instagram_url,
     bandcamp_url,
+    location,
   };
 
   if (!useNeon()) {
@@ -254,6 +260,7 @@ export async function upsertArtist(
       spotify_url: row.spotify_url || null,
       instagram_url: row.instagram_url || null,
       bandcamp_url: row.bandcamp_url || null,
+      location: row.location || null,
       public_key: row.public_key,
       created_at: new Date(row.created_at),
     })
@@ -269,6 +276,7 @@ export async function upsertArtist(
         spotify_url: row.spotify_url || null,
         instagram_url: row.instagram_url || null,
         bandcamp_url: row.bandcamp_url || null,
+        location: row.location || null,
         public_key: row.public_key,
       },
     });

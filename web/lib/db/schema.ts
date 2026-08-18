@@ -19,6 +19,7 @@ export const artists = pgTable(
     spotify_url: text('spotify_url'),
     instagram_url: text('instagram_url'),
     bandcamp_url: text('bandcamp_url'),
+    location: text('location'),
     public_key: text('public_key').notNull(),
     created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },

@@ -40,6 +40,7 @@ export default function ArtistSetupPage() {
   const [policyAccepted, setPolicyAccepted] = useState(false);
   const [displayName, setDisplayName] = useState('');
   const [bio, setBio] = useState('');
+  const [location, setLocation] = useState('');
   const [websiteUrl, setWebsiteUrl] = useState('');
   const [spotifyUrl, setSpotifyUrl] = useState('');
   const [instagramUrl, setInstagramUrl] = useState('');
@@ -77,6 +78,7 @@ export default function ArtistSetupPage() {
       if (artist?.slug) rememberProfileSlug(artist.slug);
       if (artist?.display_name && !displayName) setDisplayName(artist.display_name);
       if (artist?.bio && !bio) setBio(artist.bio);
+      if (typeof artist?.location === 'string') setLocation(artist.location);
       if (typeof artist?.website_url === 'string') setWebsiteUrl(artist.website_url);
       if (typeof artist?.spotify_url === 'string') setSpotifyUrl(artist.spotify_url);
       if (typeof artist?.instagram_url === 'string') setInstagramUrl(artist.instagram_url);
@@ -128,6 +130,7 @@ export default function ArtistSetupPage() {
         publicKey: pb,
         displayName: displayName || user?.fullName || 'Artist',
         bio: bio.trim(),
+        location: location.trim(),
         websiteUrl: websiteUrl.trim(),
         spotifyUrl: spotifyUrl.trim(),
         instagramUrl: instagramUrl.trim(),
@@ -378,6 +381,15 @@ export default function ArtistSetupPage() {
           className="sd-input mt-3 min-h-[6.5rem] resize-y"
         />
         <p className="font-telemetry mt-2 text-[10px] text-sd-muted">{bio.length}/500</p>
+
+        <h2 className="font-telemetry mt-6 text-[11px] text-sd-muted">[ LOCATION ]</h2>
+        <input
+          value={location}
+          onChange={(e) => setLocation(e.target.value.slice(0, 80))}
+          placeholder="City or region (optional)"
+          className="sd-input mt-3"
+        />
+        <p className="font-telemetry mt-2 text-[10px] text-sd-muted">{location.length}/80</p>
 
         <h2 className="font-telemetry mt-6 text-[11px] text-sd-muted">[ LINKS ]</h2>
         <p className="mt-2 text-xs text-sd-muted">

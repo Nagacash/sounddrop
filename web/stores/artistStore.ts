@@ -29,10 +29,14 @@ export interface Artist {
   publicKeyHash: string;
   displayName: string;
   bio: string;
+  /** Optional city / region line (e.g. "Berlin") */
+  location?: string;
   profileImageUrl: string;
   tracks: Track[];
   followerCount: number;
   totalDownloads: number;
+  /** Count of cryptographically signed releases on this space */
+  signedReleaseCount?: number;
   links?: ArtistLinks;
 }
 
