@@ -12,9 +12,6 @@ const nextConfig: NextConfig = {
     // Track uploads allow 12MB MP3s plus cover/form fields.
     proxyClientMaxBodySize: '16mb',
   },
-  serverActions: {
-    bodySizeLimit: '16mb',
-  },
   images: {
     remotePatterns: [
       {
