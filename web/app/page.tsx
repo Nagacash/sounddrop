@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useUIStore } from '@/stores/uiStore';
 import TrendingTracks, { flattenDiscoverTracks } from '@/components/TrendingTracks';
+import ArtistAvatar from '@/components/ArtistAvatar';
 import type { Artist } from '@/stores/artistStore';
 
 export default function Home() {
@@ -46,7 +46,6 @@ export default function Home() {
 
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-5 pb-28 pt-8 sm:pt-10">
-      {/* BeatStars-style hero: brand + one line + search as the job */}
       <section className="mb-10 border border-sd-border bg-sd-surface">
         <div className="border-b border-sd-border px-5 py-8 sm:px-8 sm:py-10">
           <p className="font-telemetry text-xs text-sd-status">[ ARTIST-OWNED · ED25519 ]</p>
@@ -112,10 +111,10 @@ export default function Home() {
           aria-label="Loading artists"
         >
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="bg-sd-surface">
-              <div className="sd-skeleton aspect-square w-full border-b border-sd-border" />
-              <div className="space-y-3 p-4">
-                <div className="sd-skeleton h-6 w-2/3" />
+            <div key={i} className="flex gap-4 bg-sd-surface p-4">
+              <div className="sd-skeleton sd-avatar h-16 w-16 shrink-0" />
+              <div className="flex-1 space-y-3">
+                <div className="sd-skeleton h-5 w-2/3" />
                 <div className="sd-skeleton h-4 w-full" />
                 <div className="sd-skeleton h-3 w-1/3" />
               </div>
@@ -131,43 +130,31 @@ export default function Home() {
                 key={artist.slug || artist.publicKeyHash}
                 href={href}
                 data-artist-card
-                className="group flex flex-col bg-sd-surface transition-colors duration-fast ease-out hover:bg-sd-surface-hover"
+                className="group flex gap-4 bg-sd-surface p-4 transition-colors duration-fast ease-out hover:bg-sd-surface-hover"
               >
-                <div className="relative aspect-square w-full overflow-hidden border-b border-sd-border">
-                  <Image
-                    src={artist.profileImageUrl}
-                    alt={artist.displayName}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 768px) 100vw, 33vw"
-                    unoptimized
-                    style={{ outline: '1px solid rgba(0,0,0,0.35)', outlineOffset: '-1px' }}
-                  />
-                  <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-sd-bg/80 px-3 py-2 opacity-0 transition-opacity duration-fast ease-out group-hover:opacity-100">
-                    <span className="font-telemetry text-[0.6875rem] text-sd-text">OPEN SPACE</span>
-                    <span className="font-telemetry text-[0.6875rem] text-sd-accent">
-                      {artist.tracks.length} TRK
-                    </span>
-                  </div>
-                </div>
-                <div className="flex flex-1 flex-col p-4">
-                  <h3 className="font-display text-xl text-sd-text">{artist.displayName}</h3>
+                <ArtistAvatar
+                  src={artist.profileImageUrl}
+                  name={artist.displayName}
+                  size="md"
+                />
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-display truncate text-xl text-sd-text">{artist.displayName}</h3>
                   {artist.location ? (
-                    <p className="mt-1 text-sm text-sd-muted">{artist.location}</p>
+                    <p className="mt-0.5 truncate text-sm text-sd-muted">{artist.location}</p>
                   ) : null}
-                  <p className="mt-2 line-clamp-2 flex-1 text-sm leading-relaxed text-sd-muted">
+                  <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-sd-muted">
                     {artist.bio}
                   </p>
-                  <div className="mt-4 flex items-center justify-between gap-2 border-t border-sd-border pt-3">
+                  <div className="mt-3 flex items-center justify-between gap-2">
                     <p className="font-telemetry text-[0.6875rem] text-sd-muted">
                       {(artist.signedReleaseCount ?? artist.tracks.length)
                         .toString()
                         .padStart(2, '0')}{' '}
-                      SIGNED
+                      SIGNED · {artist.tracks.length.toString().padStart(2, '0')} TRK
                     </p>
-                    <p className="font-telemetry text-[0.6875rem] text-sd-status">
-                      {artist.tracks.some((t) => t.isFree) ? 'FREE LISTENS' : 'PWYW'}
-                    </p>
+                    <span className="font-telemetry text-[0.6875rem] text-sd-accent opacity-0 transition-opacity duration-fast group-hover:opacity-100">
+                      OPEN →
+                    </span>
                   </div>
                 </div>
               </Link>

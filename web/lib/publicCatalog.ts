@@ -9,8 +9,7 @@ import {
 import { isMvpMockMode } from '@/lib/mockMode';
 import type { Artist, Track } from '@/stores/artistStore';
 
-const DEFAULT_PROFILE_IMAGE =
-  'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=1600&h=1000&fit=crop&q=80';
+const DEFAULT_PROFILE_IMAGE = '';
 
 function mapDbTrack(t: DbTrack): Track {
   return {

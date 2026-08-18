@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import Image from 'next/image';
 import gsap from 'gsap';
 import { formatPriceCents, formatTime, trackShareUrl } from '@/lib/utils';
 import { usePlayerStore } from '@/stores/playerStore';
+import { BeatArtPlaceholder } from '@/components/ArtistAvatar';
 import DownloadModal from '@/components/DownloadModal';
 import ShareAction from '@/components/ShareAction';
 import type { Track } from '@/stores/artistStore';
@@ -14,7 +14,6 @@ interface ArtistTrackListProps {
   slug: string;
   publicKeyHash: string;
   artistName: string;
-  artworkUrl?: string;
 }
 
 function prefersReducedMotion() {
@@ -27,7 +26,6 @@ export default function ArtistTrackList({
   slug,
   publicKeyHash,
   artistName,
-  artworkUrl,
 }: ArtistTrackListProps) {
   const listRef = useRef<HTMLDivElement>(null);
   const { currentTrack, isPlaying, playTrack } = usePlayerStore();
@@ -104,19 +102,8 @@ export default function ArtistTrackList({
                   )}
                 </button>
 
-                <div className="relative h-12 w-12 shrink-0 overflow-hidden border border-sd-border sm:h-14 sm:w-14">
-                  {artworkUrl ? (
-                    <Image
-                      src={artworkUrl}
-                      alt=""
-                      fill
-                      unoptimized
-                      className="object-cover"
-                      sizes="56px"
-                    />
-                  ) : (
-                    <div className="h-full w-full bg-sd-border" />
-                  )}
+                <div className="relative h-12 w-12 shrink-0 sm:h-14 sm:w-14">
+                  <BeatArtPlaceholder title={track.title} />
                   {playing && (
                     <div className="absolute inset-0 flex items-center justify-center bg-sd-bg/55">
                       <span className="h-2 w-2 animate-pulse bg-sd-accent" />
@@ -148,7 +135,7 @@ export default function ArtistTrackList({
                   {track.isFree ? ' · FREE' : ''}
                 </span>
 
-                <div className="flex items-center gap-1 sm:gap-1">
+                <div className="flex items-center gap-1">
                   <div className="hidden sm:block">
                     <ShareAction
                       url={shareUrl}

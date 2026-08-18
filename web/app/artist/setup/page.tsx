@@ -429,12 +429,13 @@ export default function ArtistSetupPage() {
           className="sd-input mt-2"
         />
 
-        <h2 className="font-telemetry mt-6 text-[11px] text-sd-muted">[ PROFILE IMAGE ]</h2>
+        <h2 className="font-telemetry mt-6 text-[11px] text-sd-muted">[ PROFILE PHOTO ]</h2>
         <p className="mt-2 text-xs text-sd-muted">
-          Auto-compressed to ≤512px / ~100KB JPEG so free-tier storage stays small.
+          Small circular avatar (Instagram-style). Not used as beat/cover art. Auto-compressed to
+          ≤512px / ~100KB.
         </p>
         {avatarPreview && (
-          <div className="relative mt-3 h-28 w-28 overflow-hidden border border-sd-border">
+          <div className="sd-avatar relative mt-3 h-28 w-28 overflow-hidden border border-sd-border">
             <Image
               src={avatarPreview}
               alt="Profile"

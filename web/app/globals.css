@@ -77,6 +77,15 @@ body {
   border-radius: var(--radius) !important;
 }
 
+/* Instagram-style profile avatar — only exception to mechanical corners */
+.sd-avatar {
+  border-radius: 9999px !important;
+}
+
+.sd-avatar img {
+  border-radius: 9999px !important;
+}
+
 a {
   color: inherit;
   text-decoration: none;

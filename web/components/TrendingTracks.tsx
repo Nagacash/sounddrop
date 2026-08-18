@@ -1,15 +1,15 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 import { usePlayerStore } from '@/stores/playerStore';
+import ArtistAvatar, { BeatArtPlaceholder } from '@/components/ArtistAvatar';
 import type { Artist, Track } from '@/stores/artistStore';
 
 export type DiscoverTrack = Track & {
   artistName: string;
   artistSlug: string;
   publicKeyHash: string;
-  artworkUrl: string;
+  profileImageUrl: string;
 };
 
 export function flattenDiscoverTracks(artists: Artist[], limit = 12): DiscoverTrack[] {
@@ -21,7 +21,7 @@ export function flattenDiscoverTracks(artists: Artist[], limit = 12): DiscoverTr
         artistName: artist.displayName,
         artistSlug: artist.slug || artist.publicKeyHash,
         publicKeyHash: artist.publicKeyHash,
-        artworkUrl: artist.profileImageUrl,
+        profileImageUrl: artist.profileImageUrl,
       });
     }
   }
@@ -86,15 +86,8 @@ export default function TrendingTracks({ tracks }: TrendingTracksProps) {
                 )}
               </button>
 
-              <div className="relative h-12 w-12 shrink-0 overflow-hidden border border-sd-border sm:h-14 sm:w-14">
-                <Image
-                  src={track.artworkUrl}
-                  alt=""
-                  fill
-                  unoptimized
-                  className="object-cover"
-                  sizes="56px"
-                />
+              <div className="relative h-12 w-12 shrink-0 sm:h-14 sm:w-14">
+                <BeatArtPlaceholder title={track.title} />
               </div>
 
               <div className="min-w-0">
@@ -111,14 +104,21 @@ export default function TrendingTracks({ tracks }: TrendingTracksProps) {
                 >
                   <span className={active ? 'text-sd-accent' : 'text-sd-text'}>{track.title}</span>
                 </button>
-                <p className="mt-0.5 truncate text-sm text-sd-muted">
+                <p className="mt-0.5 flex min-w-0 items-center gap-2 truncate text-sm text-sd-muted">
+                  <ArtistAvatar
+                    src={track.profileImageUrl}
+                    name={track.artistName}
+                    size="xs"
+                  />
                   <Link
                     href={`/artist/${track.artistSlug}`}
-                    className="transition-colors duration-fast hover:text-sd-text"
+                    className="truncate transition-colors duration-fast hover:text-sd-text"
                   >
                     {track.artistName}
                   </Link>
-                  {track.producers ? ` · prod. ${track.producers}` : ''}
+                  {track.producers ? (
+                    <span className="hidden truncate sm:inline"> · prod. {track.producers}</span>
+                  ) : null}
                 </p>
               </div>
 
