@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { neon } from '@neondatabase/serverless';
 import { createServiceClient } from '@/utils/supabase/admin';
+import { unwrapEnvSecret } from '@/utils/supabase/apiKey';
 
 const LOCAL_DIR = path.join(process.cwd(), 'data', 'audio');
 export const TRACK_AUDIO_BUCKET = 'track-audio';
@@ -19,7 +20,7 @@ function objectPath(cid: string) {
 }
 
 function supabaseBaseUrl(): string | null {
-  return process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || null;
+  return unwrapEnvSecret(process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL) || null;
 }
 
 /** Public CDN URL for a track in the track-audio bucket. */
@@ -30,7 +31,7 @@ export function publicStorageUrl(cid: string): string | null {
 }
 
 function hasSupabaseSecret(): boolean {
-  return Boolean(supabaseBaseUrl() && process.env.SUPABASE_SECRET_KEY);
+  return Boolean(supabaseBaseUrl() && unwrapEnvSecret(process.env.SUPABASE_SECRET_KEY));
 }
 
 function getSql() {
@@ -160,7 +161,11 @@ export async function storeAudio(cid: string, bytes: ArrayBuffer | Buffer): Prom
 
   if (error) {
     console.error('[audioStorage] supabase upload failed', error);
-    throw new Error(`supabase_upload_failed: ${error.message}`);
+    const hint =
+      error.message.includes('Compact JWS') || error.message.toLowerCase().includes('jwt')
+        ? ' — send SUPABASE_SECRET_KEY as an sb_secret_ key on the apikey header, not as a Bearer JWT'
+        : '';
+    throw new Error(`supabase_upload_failed: ${error.message}${hint}`);
   }
 
   const url = publicStorageUrl(cid);
