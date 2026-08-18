@@ -10,6 +10,7 @@ import { compressCoverFile } from '@/lib/compressCover';
 import { isMvpMockModeClient } from '@/lib/mockMode';
 import { AUDIO_MAX_BYTES } from '@/lib/mediaLimits';
 import Image from 'next/image';
+import { copyToClipboard } from '@/lib/utils';
 
 const POLICY_KEY = 'sd_policy_accepted_at';
 const PROFILE_SLUG_KEY = 'sd_profile_slug';
@@ -51,6 +52,48 @@ export default function ArtistSetupPage() {
   const [producers, setProducers] = useState('');
   const [featuring, setFeaturing] = useState('');
   const [recordLabel, setRecordLabel] = useState('');
+  const [releaseType, setReleaseType] = useState<'single' | 'ep' | 'album'>('single');
+  const [playlistTitle, setPlaylistTitle] = useState('');
+  const [playlistTrackIds, setPlaylistTrackIds] = useState<string[]>([]);
+  const [myPlaylists, setMyPlaylists] = useState<{ id: string; title: string; trackIds: string[] }[]>([]);
+
+  function moveTrack(index: number, direction: 'up' | 'down') {
+    setMyTracks((prev) => {
+      const next = [...prev];
+      const targetIndex = direction === 'up' ? index - 1 : index + 1;
+      if (targetIndex < 0 || targetIndex >= next.length) return prev;
+      const temp = next[index];
+      next[index] = next[targetIndex];
+      next[targetIndex] = temp;
+      return next;
+    });
+  }
+
+  function togglePlaylistTrack(id: string) {
+    setPlaylistTrackIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  }
+
+  function createPlaylist() {
+    if (!playlistTitle.trim()) {
+      setStatus('[ ENTER PLAYLIST TITLE ]');
+      return;
+    }
+    if (playlistTrackIds.length === 0) {
+      setStatus('[ SELECT AT LEAST ONE TRACK FOR PLAYLIST ]');
+      return;
+    }
+    const newPlaylist = {
+      id: 'pl_' + Date.now(),
+      title: playlistTitle.trim(),
+      trackIds: [...playlistTrackIds],
+    };
+    setMyPlaylists((prev) => [newPlaylist, ...prev]);
+    setPlaylistTitle('');
+    setPlaylistTrackIds([]);
+    setStatus('[ PLAYLIST CREATED & READY TO SHARE ]');
+  }
   const [myTracks, setMyTracks] = useState<DashTrack[]>([]);
   const [savingId, setSavingId] = useState('');
   const [deletingId, setDeletingId] = useState('');
@@ -591,6 +634,22 @@ export default function ArtistSetupPage() {
           </span>
         </label>
 
+        <label className="font-telemetry mt-5 block text-[10px] text-sd-muted">
+          RELEASE TYPE
+        </label>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {(['single', 'ep', 'album'] as const).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setReleaseType(t)}
+              className={`sd-chip ${releaseType === t ? 'border-sd-text text-sd-text bg-sd-surface-hover' : ''}`}
+            >
+              [ {t.toUpperCase()} ]
+            </button>
+          ))}
+        </div>
+
         <label className="font-telemetry mt-5 block text-[10px] text-sd-muted" htmlFor="track-title">
           TRACK TITLE
         </label>
@@ -686,12 +745,43 @@ export default function ArtistSetupPage() {
         <section className="sd-panel mt-8 border border-sd-border p-5">
           <h2 className="font-telemetry text-[11px] text-sd-muted">[ YOUR TRACKS ]</h2>
           <div className="mt-4 flex flex-col gap-6">
-            {myTracks.map((t) => {
+            {myTracks.map((t, index) => {
               const coverSrc = trackCoverPreviews[t.id] || t.cover_url || '';
               const busy =
                 savingId === t.id || deletingId === t.id || coverSavingId === t.id;
               return (
-              <div key={t.id} className="border border-sd-border p-4">
+              <div key={t.id} className="border border-sd-border p-4 bg-sd-surface">
+                <div className="mb-4 flex items-center justify-between border-b border-sd-border pb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="font-telemetry text-xs font-bold text-sd-accent">
+                      #{String(index + 1).padStart(2, '0')}
+                    </span>
+                    <span className="font-semibold text-sm text-sd-text truncate max-w-[200px]">
+                      {t.title || 'Untitled Track'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      disabled={index === 0 || busy}
+                      onClick={() => moveTrack(index, 'up')}
+                      className="sd-chip py-1 px-2 text.10px"
+                      title="Swap position up"
+                    >
+                      ▲ SWAP UP
+                    </button>
+                    <button
+                      type="button"
+                      disabled={index === myTracks.length - 1 || busy}
+                      onClick={() => moveTrack(index, 'down')}
+                      className="sd-chip py-1 px-2 text-[10px]"
+                      title="Swap position down"
+                    >
+                      ▼ SWAP DOWN
+                    </button>
+                  </div>
+                </div>
+
                 <label className="font-telemetry text-[10px] text-sd-muted">
                   TRACK COVER
                 </label>
@@ -767,7 +857,27 @@ export default function ArtistSetupPage() {
                   }
                   className="sd-input mt-2"
                 />
-                <div className="mt-4 flex flex-wrap gap-3">
+                <div className="mt-4 flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      disabled={index === 0 || busy}
+                      onClick={() => moveTrack(index, 'up')}
+                      className="sd-chip py-1 px-2 text-[10px]"
+                      title="Move track up"
+                    >
+                      ▲ UP
+                    </button>
+                    <button
+                      type="button"
+                      disabled={index === myTracks.length - 1 || busy}
+                      onClick={() => moveTrack(index, 'down')}
+                      className="sd-chip py-1 px-2 text-[10px]"
+                      title="Move track down"
+                    >
+                      ▼ DOWN
+                    </button>
+                  </div>
                   <button
                     type="button"
                     disabled={busy}
@@ -791,6 +901,76 @@ export default function ArtistSetupPage() {
               );
             })}
           </div>
+        </section>
+      )}
+
+      {myTracks.length > 0 && (
+        <section className="sd-panel mt-8 border border-sd-border p-5">
+          <h2 className="font-telemetry text-[11px] text-sd-muted">[ CREATE & SHARE PLAYLIST ]</h2>
+          <p className="mt-2 text-xs text-sd-muted">
+            Group your tracks into custom playlists for fans to stream and share.
+          </p>
+
+          <label className="font-telemetry mt-4 block text-[10px] text-sd-muted" htmlFor="pl-title">
+            PLAYLIST TITLE
+          </label>
+          <input
+            id="pl-title"
+            value={playlistTitle}
+            onChange={(e) => setPlaylistTitle(e.target.value.slice(0, 100))}
+            placeholder="e.g. Summer Unreleased, Midnight Mix"
+            className="sd-input mt-2"
+          />
+
+          <label className="font-telemetry mt-4 block text-[10px] text-sd-muted">
+            SELECT TRACKS FOR PLAYLIST
+          </label>
+          <div className="mt-2 flex flex-col gap-2">
+            {myTracks.map((tr) => (
+              <label key={tr.id} className="flex items-center gap-3 border border-sd-border p-3 cursor-pointer hover:bg-sd-surface-hover">
+                <input
+                  type="checkbox"
+                  checked={playlistTrackIds.includes(tr.id)}
+                  onChange={() => togglePlaylistTrack(tr.id)}
+                  className="h-4 w-4 accent-sd-accent"
+                />
+                <span className="text-sm font-semibold text-sd-text">{tr.title || 'Untitled Track'}</span>
+              </label>
+            ))}
+          </div>
+
+          <button type="button" onClick={createPlaylist} className="sd-btn mt-4">
+            [ CREATE PLAYLIST ]
+          </button>
+
+          {myPlaylists.length > 0 && (
+            <div className="mt-8 border-t border-sd-border pt-6">
+              <h3 className="font-telemetry text-[10px] text-sd-muted">[ YOUR PLAYLISTS ]</h3>
+              <div className="mt-4 flex flex-col gap-4">
+                {myPlaylists.map((pl) => (
+                  <div key={pl.id} className="flex flex-wrap items-center justify-between gap-3 border border-sd-border p-4">
+                    <div>
+                      <p className="font-semibold text-sd-text">{pl.title}</p>
+                      <p className="font-telemetry text-xs text-sd-muted mt-1">
+                        {pl.trackIds.length} TRACK{pl.trackIds.length === 1 ? '' : 'S'}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const shareUrl = `${window.location.origin}/artist/${profileSlug || 'space'}#${pl.id}`;
+                        void copyToClipboard(shareUrl);
+                        setStatus('[ PLAYLIST LINK COPIED ]');
+                      }}
+                      className="sd-btn"
+                    >
+                      [ SHARE PLAYLIST LINK ]
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </section>
       )}
 
