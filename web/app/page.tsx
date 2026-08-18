@@ -50,11 +50,11 @@ export default function Home() {
         <div className="border-b border-sd-border px-5 py-8 sm:px-8 sm:py-10">
           <p className="font-telemetry text-xs text-sd-status">[ ARTIST-OWNED · ED25519 ]</p>
           <h1 className="font-display mt-3 text-[clamp(2.75rem,9vw,5.5rem)] text-sd-text">
-            Your next drop starts here
+            SoundDrop
           </h1>
           <p className="text-pretty mt-4 max-w-2xl text-base leading-relaxed text-sd-muted">
-            Browse signed releases. Play free. Support artists directly — SoundDrop is the space, not
-            the middleman catalog.
+            Publish MP3s signed with Ed25519 keys kept in your browser. Listeners stream and download
+            from your public space. No middleman catalog.
           </p>
         </div>
 
@@ -87,6 +87,85 @@ export default function Home() {
           )}
         </div>
       </section>
+
+      {!searching && (
+        <section className="mb-12 border border-sd-border bg-sd-surface px-5 py-8 sm:px-8">
+          <p className="font-telemetry text-xs text-sd-muted">[ START HERE ]</p>
+          <h2 className="font-display mt-2 text-2xl text-sd-text sm:text-3xl">
+            First upload, step by step
+          </h2>
+          <p className="mt-4 max-w-2xl text-sm leading-relaxed text-sd-muted">
+            SoundDrop uses Ed25519 keys. Your private key never leaves this browser. The server only
+            gets your public key, so anyone can check that a release came from you.
+          </p>
+
+          <ol className="mt-8 space-y-6 border-t border-sd-border pt-8">
+            <li className="grid gap-2 sm:grid-cols-[4rem_1fr] sm:gap-4">
+              <span className="font-telemetry text-xs tabular-nums text-sd-accent">01</span>
+              <div>
+                <p className="text-sm font-semibold text-sd-text">Sign in and open the dashboard</p>
+                <p className="mt-1 text-sm leading-relaxed text-sd-muted">
+                  Hit Upload above (or Open dashboard below). Accept the content policy once. You are
+                  responsible for what you publish.
+                </p>
+              </div>
+            </li>
+            <li className="grid gap-2 sm:grid-cols-[4rem_1fr] sm:gap-4">
+              <span className="font-telemetry text-xs tabular-nums text-sd-accent">02</span>
+              <div>
+                <p className="text-sm font-semibold text-sd-text">Create your keypair</p>
+                <p className="mt-1 text-sm leading-relaxed text-sd-muted">
+                  The dashboard generates an Ed25519 keypair in your browser and stores the private
+                  key in local storage. Register the public key so your artist space is tied to that
+                  key. If you clear site data, you lose the private key, so keep a backup if you care
+                  about the same identity later.
+                </p>
+              </div>
+            </li>
+            <li className="grid gap-2 sm:grid-cols-[4rem_1fr] sm:gap-4">
+              <span className="font-telemetry text-xs tabular-nums text-sd-accent">03</span>
+              <div>
+                <p className="text-sm font-semibold text-sd-text">Pick an MP3 and sign the release</p>
+                <p className="mt-1 text-sm leading-relaxed text-sd-muted">
+                  Add a title, optional producers and featuring credits, and a track thumbnail if you
+                  want one. On upload we hash the file (CID), sign the metadata with your private
+                  key, then store the audio. The signature travels with the track so listeners can
+                  see it as a signed release.
+                </p>
+              </div>
+            </li>
+            <li className="grid gap-2 sm:grid-cols-[4rem_1fr] sm:gap-4">
+              <span className="font-telemetry text-xs tabular-nums text-sd-accent">04</span>
+              <div>
+                <p className="text-sm font-semibold text-sd-text">Share your space</p>
+                <p className="mt-1 text-sm leading-relaxed text-sd-muted">
+                  You get a public page at /artist/your-slug. People can stream in the browser and
+                  download the MP3. SoundDrop hosts the page and the file. It does not own the music
+                  or replace your Bandcamp or Spotify links. You can still put those on your profile.
+                </p>
+              </div>
+            </li>
+          </ol>
+
+          <div className="mt-8 border-t border-sd-border pt-6">
+            <p className="font-telemetry text-xs text-sd-accent">FOR LISTENERS</p>
+            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-sd-muted">
+              Search an artist, open their space, play tracks, download when you want the file.
+              Signed means the upload was checked against that artist&apos;s public key. No account
+              needed to listen.
+            </p>
+          </div>
+
+          <div className="mt-8 flex flex-col gap-3 border-t border-sd-border pt-6 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-sd-muted">
+              That is the whole loop: key in browser, sign the drop, share the link.
+            </p>
+            <Link href="/artist/setup" className="sd-btn shrink-0">
+              [ OPEN DASHBOARD ]
+            </Link>
+          </div>
+        </section>
+      )}
 
       {!searching && !loading && <TrendingTracks tracks={trending} />}
 
@@ -169,33 +248,15 @@ export default function Home() {
         </p>
       )}
 
-      <footer className="mt-16 border-t border-sd-border pt-8">
-        <p className="font-telemetry text-xs text-sd-muted">[ PRIVACY · CONTACT ]</p>
-        <p className="mt-3 max-w-xl text-sm leading-relaxed text-sd-muted">
-          If you have questions about this Privacy Policy or how we handle personal data, contact:
+      <footer className="mt-16 border-t border-sd-border pt-8 pb-4">
+        <p className="font-telemetry text-[0.6875rem] text-sd-muted">
+          <Link
+            href="/privacy"
+            className="transition-colors duration-fast hover:text-sd-text"
+          >
+            Privacy
+          </Link>
         </p>
-        <address className="mt-4 not-italic text-sm leading-relaxed text-sd-text">
-          <p>Maurice Holda</p>
-          <p>20355 Hamburg</p>
-          <p>Germany</p>
-          <p className="mt-3">
-            Tel:{' '}
-            <a
-              href="tel:+4917629255188"
-              className="text-sd-muted transition-colors duration-fast hover:text-sd-accent"
-            >
-              +49 176 29255188
-            </a>
-          </p>
-          <p>
-            <a
-              href="mailto:chosenfewrecords@hotmail.de"
-              className="text-sd-muted transition-colors duration-fast hover:text-sd-accent"
-            >
-              chosenfewrecords@hotmail.de
-            </a>
-          </p>
-        </address>
       </footer>
     </main>
   );

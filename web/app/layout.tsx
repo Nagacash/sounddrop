@@ -21,7 +21,8 @@ const mono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: 'SoundDrop',
-  description: 'Artist-owned audio drops — signed, not custodied',
+  description:
+    'Publish signed MP3s on your own space. Listeners stream and download without a middleman catalog.',
   icons: {
     icon: [
       { url: '/icon.png', type: 'image/png', sizes: '512x512' },
