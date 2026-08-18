@@ -128,6 +128,7 @@ export default function GlobalPlayer() {
                 ) : (
                   currentTrack.artistName
                 )}
+                <span className="ml-2 inline-block text-[0.65rem] text-sd-status font-telemetry">[ED25519 VERIFIED]</span>
               </p>
               <div className="mt-2 flex items-center gap-2">
                 <span className="w-10 shrink-0 text-xs tabular-nums text-white/40">

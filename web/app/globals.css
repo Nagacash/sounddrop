@@ -274,12 +274,13 @@ a {
   padding: 0.2rem 0.45rem;
   border: 1px solid var(--sd-status);
   color: var(--sd-status);
-  background: transparent;
+  background: rgba(74, 246, 38, 0.05);
   font-family: var(--font-mono), ui-monospace, monospace;
   font-size: 0.6rem;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
+  box-shadow: 0 0 10px rgba(74, 246, 38, 0.15);
 }
 
 /* Home artist card entrance — opacity only */
