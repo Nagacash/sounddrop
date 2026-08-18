@@ -20,6 +20,7 @@ function mapDbTrack(t: DbTrack): Track {
     duration: 0,
     isFree: true,
     storageUrl: t.storage_url || `/api/media/${encodeURIComponent(t.cid)}`,
+    coverUrl: t.cover_url || undefined,
     verified: true,
     createdAt: t.created_at,
     producers: t.producers || '',

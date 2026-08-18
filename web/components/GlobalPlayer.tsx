@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePlayerStore } from '@/stores/playerStore';
 import { formatTime } from '@/lib/utils';
@@ -91,6 +92,18 @@ export default function GlobalPlayer() {
           </div>
 
           <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 sm:gap-5 sm:px-6">
+            {currentTrack.coverUrl ? (
+              <div className="relative h-12 w-12 shrink-0 overflow-hidden border border-sd-border sm:h-14 sm:w-14">
+                <Image
+                  src={currentTrack.coverUrl}
+                  alt=""
+                  fill
+                  sizes="56px"
+                  unoptimized
+                  className="object-cover"
+                />
+              </div>
+            ) : null}
             <button
               type="button"
               onClick={togglePlay}

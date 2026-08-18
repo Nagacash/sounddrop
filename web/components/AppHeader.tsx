@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { SignInButton, SignUpButton, Show, UserButton } from '@clerk/nextjs';
 import AdminNavLink from '@/components/AdminNavLink';
@@ -13,6 +14,25 @@ export function isArtistSpacePath(pathname: string) {
   return pathname.length > '/artist/'.length;
 }
 
+function BrandMark({ compact = false }: { compact?: boolean }) {
+  return (
+    <>
+      <Image
+        src="/logo.png"
+        alt=""
+        width={compact ? 28 : 36}
+        height={compact ? 28 : 36}
+        className="h-7 w-7 object-contain sm:h-9 sm:w-9"
+        priority
+        unoptimized
+      />
+      <span className={compact ? 'tracking-[0.18em]' : 'font-display text-xl sm:text-2xl'}>
+        SOUNDDROP
+      </span>
+    </>
+  );
+}
+
 export default function AppHeader({ mock }: { mock: boolean }) {
   const pathname = usePathname() || '/';
 
@@ -21,9 +41,9 @@ export default function AppHeader({ mock }: { mock: boolean }) {
       <div className="pointer-events-none fixed left-0 top-0 z-header p-5 sm:p-6">
         <Link
           href="/"
-          className="pointer-events-auto text-[11px] font-semibold tracking-[0.18em] text-white/55 transition-colors duration-200 hover:text-white"
+          className="pointer-events-auto inline-flex items-center gap-2 text-[11px] font-semibold text-white/55 transition-colors duration-200 hover:text-white"
         >
-          SOUNDDROP
+          <BrandMark compact />
         </Link>
       </div>
     );
@@ -34,9 +54,9 @@ export default function AppHeader({ mock }: { mock: boolean }) {
       <div className="mx-auto flex max-w-6xl flex-wrap items-stretch gap-0">
         <Link
           href="/"
-          className="font-display flex items-center border-r border-sd-border px-5 py-4 text-xl text-sd-text sm:text-2xl"
+          className="flex items-center gap-2.5 border-r border-sd-border px-4 py-3 text-sd-text sm:gap-3 sm:px-5 sm:py-4"
         >
-          SOUNDDROP
+          <BrandMark />
         </Link>
         <nav className="font-telemetry flex flex-1 flex-wrap items-center gap-1 px-2 text-xs text-sd-muted sm:gap-0">
           <Link

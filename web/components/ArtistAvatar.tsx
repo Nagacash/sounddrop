@@ -78,3 +78,32 @@ export function BeatArtPlaceholder({
     </div>
   );
 }
+
+/** Track cover thumbnail — never falls back to profile avatar. */
+export function BeatCover({
+  src,
+  title,
+  className = '',
+}: {
+  src?: string | null;
+  title?: string;
+  className?: string;
+}) {
+  if (!src?.trim()) {
+    return <BeatArtPlaceholder title={title} className={className} />;
+  }
+  return (
+    <div
+      className={`relative h-full w-full overflow-hidden border border-sd-border bg-sd-bg ${className}`}
+    >
+      <Image
+        src={src}
+        alt={title ? `${title} cover` : 'Track cover'}
+        fill
+        sizes="56px"
+        unoptimized
+        className="object-cover"
+      />
+    </div>
+  );
+}

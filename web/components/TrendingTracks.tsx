@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePlayerStore } from '@/stores/playerStore';
-import ArtistAvatar, { BeatArtPlaceholder } from '@/components/ArtistAvatar';
+import ArtistAvatar, { BeatCover } from '@/components/ArtistAvatar';
 import type { Artist, Track } from '@/stores/artistStore';
 
 export type DiscoverTrack = Track & {
@@ -87,7 +87,7 @@ export default function TrendingTracks({ tracks }: TrendingTracksProps) {
               </button>
 
               <div className="relative h-12 w-12 shrink-0 sm:h-14 sm:w-14">
-                <BeatArtPlaceholder title={track.title} />
+                <BeatCover src={track.coverUrl} title={track.title} />
               </div>
 
               <div className="min-w-0">

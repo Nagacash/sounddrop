@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { deleteAudio } from '@/lib/audioStorage';
+import { deleteCover } from '@/lib/coverStorage';
 import { getTrack, hardDeleteTrack, updateTrackMeta } from '@/lib/db';
 import { isMvpMockMode } from '@/lib/mockMode';
 import { hashPublicKey } from '@/lib/publicKeyHash';
@@ -76,6 +77,7 @@ export async function DELETE(req: NextRequest, { params }: Props) {
   if (denied) return denied;
 
   await deleteAudio(track.cid);
+  await deleteCover(track.cid);
   const ok = await hardDeleteTrack(id);
   if (!ok) {
     return NextResponse.json({ error: 'delete_failed' }, { status: 500 });

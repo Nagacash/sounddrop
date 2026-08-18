@@ -38,6 +38,7 @@ export type Track = {
   signature: string;
   public_key: string;
   storage_url: string | null;
+  cover_url?: string | null;
   producers?: string | null;
   featuring?: string | null;
   created_at: string;
@@ -145,6 +146,7 @@ function mapTrack(row: typeof tracks.$inferSelect): Track {
     signature: row.signature,
     public_key: row.public_key,
     storage_url: row.storage_url,
+    cover_url: row.cover_url || null,
     producers: row.producers || '',
     featuring: row.featuring || '',
     created_at: iso(row.created_at),
@@ -346,6 +348,7 @@ export async function insertTrack(t: Track) {
       signature: t.signature,
       public_key: t.public_key,
       storage_url: t.storage_url,
+      cover_url: t.cover_url || null,
       producers: t.producers || null,
       featuring: t.featuring || null,
       created_at: new Date(t.created_at),
@@ -362,6 +365,7 @@ export async function insertTrack(t: Track) {
         signature: t.signature,
         public_key: t.public_key,
         storage_url: t.storage_url,
+        cover_url: t.cover_url || null,
         producers: t.producers || null,
         featuring: t.featuring || null,
         removed_at: null,

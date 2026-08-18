@@ -9,6 +9,8 @@ export interface Track {
   isFree: boolean;
   minPriceCents?: number;
   storageUrl: string;
+  /** Square track artwork URL (not profile avatar). */
+  coverUrl?: string;
   verified: boolean;
   createdAt: string;
   producers?: string;

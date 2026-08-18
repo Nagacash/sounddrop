@@ -5,9 +5,10 @@ import { verifyIngest } from '@/lib/ingest';
 import { checkAudioFingerprint } from '@/lib/audd';
 import { getArtist, insertTrack, listTracks, upsertArtist } from '@/lib/db';
 import { storeAudio } from '@/lib/audioStorage';
+import { storeCover } from '@/lib/coverStorage';
 import { isMvpMockMode } from '@/lib/mockMode';
 import { hashPublicKey } from '@/lib/publicKeyHash';
-import { AUDIO_MAX_BYTES } from '@/lib/mediaLimits';
+import { AUDIO_MAX_BYTES, COVER_MAX_BYTES, COVER_MIME } from '@/lib/mediaLimits';
 import { takeRateLimit } from '@/lib/rateLimit';
 
 function isMp3(file: Blob, name: string) {
@@ -169,6 +170,39 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  let coverUrl: string | null = null;
+  const coverField = form.get('cover');
+  if (coverField instanceof Blob && coverField.size > 0) {
+    const coverType = coverField.type || 'image/jpeg';
+    if (!COVER_MIME.has(coverType) && coverType !== 'image/jpg') {
+      return NextResponse.json(
+        { error: 'invalid_cover_type', detail: 'Cover must be JPEG, PNG, or WebP' },
+        { status: 400 },
+      );
+    }
+    if (coverField.size > COVER_MAX_BYTES) {
+      return NextResponse.json(
+        {
+          error: 'cover_too_large',
+          detail: `Cover must be under ${Math.round(COVER_MAX_BYTES / 1024)}KB`,
+        },
+        { status: 413 },
+      );
+    }
+    try {
+      coverUrl = await storeCover(realCid, await coverField.arrayBuffer());
+    } catch (err) {
+      console.error('[tracks] cover store failed', err);
+      return NextResponse.json(
+        {
+          error: 'cover_store_failed',
+          detail: err instanceof Error ? err.message : 'Could not store cover',
+        },
+        { status: 500 },
+      );
+    }
+  }
+
   const displayTitle =
     titleOverride ||
     (typeof meta.title === 'string' ? meta.title.trim() : '') ||
@@ -185,6 +219,7 @@ export async function POST(req: NextRequest) {
     signature,
     public_key: publicKey,
     storage_url: storageUrl,
+    cover_url: coverUrl,
     producers: producers || null,
     featuring: featuring || null,
     created_at: new Date().toISOString(),
@@ -215,6 +250,7 @@ export async function GET() {
       type: t.type,
       cid: t.cid,
       storage_url: t.storage_url,
+      cover_url: t.cover_url,
       producers: t.producers,
       featuring: t.featuring,
       created_at: t.created_at,

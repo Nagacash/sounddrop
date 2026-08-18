@@ -168,6 +168,35 @@ export default function Home() {
           [ NO MATCH — TRY ANOTHER QUERY ]
         </p>
       )}
+
+      <footer className="mt-16 border-t border-sd-border pt-8">
+        <p className="font-telemetry text-xs text-sd-muted">[ PRIVACY · CONTACT ]</p>
+        <p className="mt-3 max-w-xl text-sm leading-relaxed text-sd-muted">
+          If you have questions about this Privacy Policy or how we handle personal data, contact:
+        </p>
+        <address className="mt-4 not-italic text-sm leading-relaxed text-sd-text">
+          <p>Maurice Holda</p>
+          <p>20355 Hamburg</p>
+          <p>Germany</p>
+          <p className="mt-3">
+            Tel:{' '}
+            <a
+              href="tel:+4917629255188"
+              className="text-sd-muted transition-colors duration-fast hover:text-sd-accent"
+            >
+              +49 176 29255188
+            </a>
+          </p>
+          <p>
+            <a
+              href="mailto:chosenfewrecords@hotmail.de"
+              className="text-sd-muted transition-colors duration-fast hover:text-sd-accent"
+            >
+              chosenfewrecords@hotmail.de
+            </a>
+          </p>
+        </address>
+      </footer>
     </main>
   );
 }

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { formatPriceCents, formatTime, trackShareUrl } from '@/lib/utils';
 import { usePlayerStore } from '@/stores/playerStore';
-import { BeatArtPlaceholder } from '@/components/ArtistAvatar';
+import { BeatCover } from '@/components/ArtistAvatar';
 import DownloadModal from '@/components/DownloadModal';
 import ShareAction from '@/components/ShareAction';
 import type { Track } from '@/stores/artistStore';
@@ -103,7 +103,7 @@ export default function ArtistTrackList({
                 </button>
 
                 <div className="relative h-12 w-12 shrink-0 sm:h-14 sm:w-14">
-                  <BeatArtPlaceholder title={track.title} />
+                  <BeatCover src={track.coverUrl} title={track.title} />
                   {playing && (
                     <div className="absolute inset-0 flex items-center justify-center bg-sd-bg/55">
                       <span className="h-2 w-2 animate-pulse bg-sd-accent" />

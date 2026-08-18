@@ -41,6 +41,7 @@ export const tracks = pgTable(
     signature: text('signature').notNull(),
     public_key: text('public_key').notNull(),
     storage_url: text('storage_url'),
+    cover_url: text('cover_url'),
     producers: text('producers'),
     featuring: text('featuring'),
     created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

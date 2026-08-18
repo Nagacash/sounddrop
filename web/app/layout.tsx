@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { Archivo_Black, JetBrains_Mono } from 'next/font/google';
 import { ClerkProvider } from '@clerk/nextjs';
 import { isMvpMockMode } from '@/lib/mockMode';
@@ -18,9 +19,17 @@ const mono = JetBrains_Mono({
   display: 'swap',
 });
 
-export const metadata = {
+export const metadata: Metadata = {
   title: 'SoundDrop',
   description: 'Artist-owned audio drops — signed, not custodied',
+  icons: {
+    icon: [
+      { url: '/icon.png', type: 'image/png', sizes: '512x512' },
+      { url: '/logo.png', type: 'image/png' },
+    ],
+    shortcut: '/favicon.ico',
+    apple: [{ url: '/apple-icon.png', sizes: '180x180', type: 'image/png' }],
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

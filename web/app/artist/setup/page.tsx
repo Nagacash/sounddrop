@@ -2,10 +2,11 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { generateKeypair, signMeta, computeCID } from '@/lib/crypto';
 import { compressAvatarFile } from '@/lib/compressAvatar';
+import { compressCoverFile } from '@/lib/compressCover';
 import { isMvpMockModeClient } from '@/lib/mockMode';
 import { AUDIO_MAX_BYTES } from '@/lib/mediaLimits';
 import Image from 'next/image';
@@ -19,6 +20,7 @@ type DashTrack = {
   producers?: string | null;
   featuring?: string | null;
   storage_url?: string | null;
+  cover_url?: string | null;
 };
 
 const initialPriv = typeof window !== 'undefined' ? localStorage.getItem('sd_priv') || '' : '';
@@ -54,7 +56,9 @@ export default function ArtistSetupPage() {
   const [profileSlug, setProfileSlug] = useState(initialProfileSlug);
   const [avatarPreview, setAvatarPreview] = useState('');
   const [avatarBusy, setAvatarBusy] = useState(false);
+  const [coverPreview, setCoverPreview] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
+  const coverRef = useRef<HTMLInputElement>(null);
   const avatarRef = useRef<HTMLInputElement>(null);
 
   function rememberProfileSlug(slug: string) {
@@ -199,6 +203,19 @@ export default function ArtistSetupPage() {
     };
     setStage('[ SIGNING / ED25519 ]');
     const signature = await signMeta(meta, pk);
+    setStage('[ PREPARING COVER ]');
+    let coverBlob: Blob | null = null;
+    const coverFile = coverRef.current?.files?.[0];
+    if (coverFile) {
+      try {
+        coverBlob = await compressCoverFile(coverFile);
+      } catch (err) {
+        setStage('');
+        const msg = err instanceof Error ? err.message : 'cover_failed';
+        setStatus(`[ COVER REJECTED ] ${msg}`);
+        return;
+      }
+    }
     setStage('[ UPLOADING / STORING AUDIO ]');
     const fd = new FormData();
     fd.append('file', f);
@@ -209,6 +226,9 @@ export default function ArtistSetupPage() {
     fd.append('title', trackTitle.trim() || defaultTitle);
     fd.append('producers', producers.trim());
     fd.append('featuring', featuring.trim());
+    if (coverBlob) {
+      fd.append('cover', coverBlob, 'cover.jpg');
+    }
     const res = await fetch('/api/tracks', { method: 'POST', body: fd });
     const data = await res.json();
     setStage('');
@@ -223,7 +243,9 @@ export default function ArtistSetupPage() {
       setTrackTitle('');
       setProducers('');
       setFeaturing('');
+      setCoverPreview('');
       if (fileRef.current) fileRef.current.value = '';
+      if (coverRef.current) coverRef.current.value = '';
       await loadMyTracks();
       if (slug) {
         // Give a beat to see success, then open the space.
@@ -325,9 +347,24 @@ export default function ArtistSetupPage() {
     void upload();
   }
 
-  function handleAvatarPick(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleAvatarPick(e: ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
     if (f) void uploadAvatar(f);
+  }
+
+  function onCoverPick(e: ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (!f) {
+      setCoverPreview('');
+      return;
+    }
+    if (!f.type.startsWith('image/')) {
+      setStatus('[ COVER MUST BE AN IMAGE ]');
+      e.target.value = '';
+      setCoverPreview('');
+      return;
+    }
+    setCoverPreview(URL.createObjectURL(f));
   }
 
   if (!isSignedIn && !mock) {
@@ -514,11 +551,41 @@ export default function ArtistSetupPage() {
           className="sd-input mt-2"
         />
 
+        <label className="font-telemetry mt-4 block text-[10px] text-sd-muted" htmlFor="track-cover">
+          TRACK THUMBNAIL (OPTIONAL)
+        </label>
+        <p className="mt-1 text-xs text-sd-muted">
+          Square cover for this release — separate from your profile photo.
+        </p>
+        {coverPreview && (
+          <div className="relative mt-3 h-24 w-24 overflow-hidden border border-sd-border">
+            <Image
+              src={coverPreview}
+              alt="Cover preview"
+              fill
+              unoptimized
+              className="object-cover"
+            />
+          </div>
+        )}
         <input
+          id="track-cover"
+          ref={coverRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          onChange={onCoverPick}
+          className="font-telemetry mt-3 block w-full text-xs text-sd-muted file:mr-4 file:border file:border-sd-border file:bg-sd-bg file:px-3 file:py-2 file:text-[10px] file:uppercase file:tracking-widest file:text-sd-text"
+        />
+
+        <label className="font-telemetry mt-4 block text-[10px] text-sd-muted" htmlFor="track-mp3">
+          MP3 FILE
+        </label>
+        <input
+          id="track-mp3"
           ref={fileRef}
           type="file"
           accept="audio/mpeg,.mp3"
-          className="font-telemetry mt-4 block w-full text-xs text-sd-muted file:mr-4 file:border file:border-sd-border file:bg-sd-bg file:px-3 file:py-2 file:text-[10px] file:uppercase file:tracking-widest file:text-sd-text"
+          className="font-telemetry mt-2 block w-full text-xs text-sd-muted file:mr-4 file:border file:border-sd-border file:bg-sd-bg file:px-3 file:py-2 file:text-[10px] file:uppercase file:tracking-widest file:text-sd-text"
         />
         <button type="button" onClick={handleUploadClick} className="sd-btn mt-4">
           [ SIGN & UPLOAD ]
@@ -536,6 +603,17 @@ export default function ArtistSetupPage() {
           <div className="mt-4 flex flex-col gap-6">
             {myTracks.map((t) => (
               <div key={t.id} className="border border-sd-border p-4">
+                {t.cover_url ? (
+                  <div className="relative mb-4 h-16 w-16 overflow-hidden border border-sd-border">
+                    <Image
+                      src={t.cover_url}
+                      alt=""
+                      fill
+                      unoptimized
+                      className="object-cover"
+                    />
+                  </div>
+                ) : null}
                 <label className="font-telemetry text-[10px] text-sd-muted">TITLE</label>
                 <input
                   value={t.title || ''}
