@@ -62,13 +62,13 @@ export default function Home() {
           <div className="relative hidden min-h-[220px] border-l border-sd-border lg:block">
             <Image
               src="/hero-rooftop.jpg"
-              alt="SoundDrop Rooftop Session"
+              alt="SoundDrop Rooftop Session (AI-Generated Image)"
               fill
               sizes="(max-width: 1024px) 100vw, 40vw"
               className="object-cover opacity-80 filter grayscale contrast-125 transition-opacity duration-300 hover:opacity-100"
             />
             <div className="absolute bottom-3 left-3 bg-sd-bg/90 px-2 py-1 font-telemetry text-[10px] text-sd-status border border-sd-border">
-              [ LIVE SESSION · RAW AUDIO ]
+              [ LIVE SESSION · RAW AUDIO ] · [ AI GENERATED IMAGE ]
             </div>
           </div>
         </div>
@@ -166,25 +166,25 @@ export default function Home() {
             <div className="relative h-44 overflow-hidden border border-sd-border">
               <Image
                 src="/studio-focus.jpg"
-                alt="Studio Focus"
+                alt="Studio Focus (AI-Generated Image)"
                 fill
                 sizes="(max-width: 640px) 100vw, 50vw"
                 className="object-cover opacity-75 filter grayscale contrast-125 transition-opacity duration-300 hover:opacity-95"
               />
               <div className="absolute bottom-2 left-2 bg-sd-bg/90 px-2 py-0.5 font-telemetry text-[9px] text-sd-text border border-sd-border">
-                [ STUDIO PRODUCER · ED25519 SIGNING ]
+                [ STUDIO PRODUCER ] · [ AI GENERATED IMAGE ]
               </div>
             </div>
             <div className="relative h-44 overflow-hidden border border-sd-border">
               <Image
                 src="/live-underground.jpg"
-                alt="Underground Live"
+                alt="Underground Live (AI-Generated Image)"
                 fill
                 sizes="(max-width: 640px) 100vw, 50vw"
                 className="object-cover opacity-75 filter grayscale contrast-125 transition-opacity duration-300 hover:opacity-95"
               />
               <div className="absolute bottom-2 left-2 bg-sd-bg/90 px-2 py-0.5 font-telemetry text-[9px] text-sd-status border border-sd-border">
-                [ UNDERGROUND VENUE · DIRECT FAN CONNECTION ]
+                [ VENUE ] · [ AI GENERATED IMAGE ]
               </div>
             </div>
           </div>
@@ -290,7 +290,7 @@ export default function Home() {
         </p>
       )}
 
-      <footer className="mt-16 border-t border-sd-border pt-8 pb-4">
+      <footer className="mt-16 flex flex-wrap items-center justify-between gap-4 border-t border-sd-border pt-8 pb-4">
         <p className="font-telemetry text-[0.6875rem] text-sd-muted">
           <Link
             href="/privacy"
@@ -298,6 +298,9 @@ export default function Home() {
           >
             Privacy
           </Link>
+        </p>
+        <p className="font-telemetry text-[0.6875rem] text-sd-muted">
+          [ EU AI ACT COMPLIANT · DEPICTED MEDIA CONTAINS AI-GENERATED IMAGERY ]
         </p>
       </footer>
     </main>
