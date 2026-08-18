@@ -1,12 +1,31 @@
 import { clerkMiddleware } from '@clerk/nextjs/server';
 import type { NextFetchEvent, NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 import { isMvpMockMode } from '@/lib/mockMode';
+import { updateSession } from '@/utils/supabase/middleware';
 
-const handler = clerkMiddleware();
+const clerkHandler = clerkMiddleware();
 
-export default function proxy(req: NextRequest, ev: NextFetchEvent) {
-  if (isMvpMockMode()) return;
-  return handler(req, ev);
+export default async function proxy(req: NextRequest, ev: NextFetchEvent) {
+  // Keep Supabase auth cookies fresh on every matched request.
+  const supabaseResponse = await updateSession(req);
+
+  if (isMvpMockMode()) {
+    return supabaseResponse;
+  }
+
+  const clerkResult = await clerkHandler(req, ev);
+  if (!clerkResult) {
+    return supabaseResponse;
+  }
+
+  // Merge refreshed Supabase cookies onto the Clerk response when possible.
+  if (clerkResult instanceof NextResponse) {
+    supabaseResponse.cookies.getAll().forEach((cookie) => {
+      clerkResult.cookies.set(cookie);
+    });
+  }
+  return clerkResult;
 }
 
 export const config = {

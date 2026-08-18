@@ -14,6 +14,7 @@ export const artists = pgTable(
     display_name: text('display_name'),
     slug: text('slug'),
     bio: text('bio'),
+    profile_image_url: text('profile_image_url'),
     public_key: text('public_key').notNull(),
     created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },

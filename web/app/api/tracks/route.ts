@@ -7,6 +7,7 @@ import { getArtist, insertTrack, listTracks, upsertArtist } from '@/lib/db';
 import { storeAudio } from '@/lib/audioStorage';
 import { isMvpMockMode } from '@/lib/mockMode';
 import { hashPublicKey } from '@/lib/publicKeyHash';
+import { AUDIO_MAX_BYTES } from '@/lib/mediaLimits';
 
 function isMp3(file: Blob, name: string) {
   return file.type === 'audio/mpeg' || name.toLowerCase().endsWith('.mp3');
@@ -59,6 +60,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       { error: 'Only MP3 files are supported. Please upload an MP3 file.' },
       { status: 400 },
+    );
+  }
+  if (file.size > AUDIO_MAX_BYTES) {
+    return NextResponse.json(
+      {
+        error: 'file_too_large',
+        detail: `MP3 must be under ${Math.round(AUDIO_MAX_BYTES / (1024 * 1024))}MB`,
+      },
+      { status: 413 },
     );
   }
 

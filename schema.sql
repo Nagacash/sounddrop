@@ -8,11 +8,20 @@ CREATE TABLE IF NOT EXISTS artists (
   display_name  TEXT,
   slug          TEXT UNIQUE,               -- vanity URL: /artist/{slug}
   bio           TEXT,                      -- short public artist bio
+  profile_image_url TEXT,                  -- /api/artists/avatar/{user_id}
   public_key    TEXT NOT NULL,             -- base64 SPKI, used to verify uploads
   created_at    TIMESTAMPTZ DEFAULT now()
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_artists_slug ON artists(slug);
+
+CREATE TABLE IF NOT EXISTS artist_avatars (
+  user_id       TEXT PRIMARY KEY REFERENCES artists(user_id) ON DELETE CASCADE,
+  bytes         BYTEA NOT NULL,
+  content_type  TEXT NOT NULL DEFAULT 'image/jpeg',
+  byte_size     INT NOT NULL,
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 
 CREATE TABLE IF NOT EXISTS tracks (
   id            TEXT PRIMARY KEY,           -- = cid (content address)

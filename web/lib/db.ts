@@ -17,6 +17,7 @@ export type Artist = {
   display_name: string;
   slug: string;
   bio: string;
+  profile_image_url: string;
   public_key: string;
   created_at: string;
 };
@@ -84,6 +85,7 @@ function mapArtist(row: typeof artists.$inferSelect): Artist {
     display_name: row.display_name || '',
     slug: row.slug || '',
     bio: row.bio || '',
+    profile_image_url: row.profile_image_url || '',
     public_key: row.public_key,
     created_at: iso(row.created_at),
   };
@@ -179,13 +181,21 @@ function writeAll(data: DbShape) {
 
 /* ---------------- Public API ---------------- */
 
-export async function upsertArtist(a: Omit<Artist, 'slug' | 'bio'> & { slug?: string; bio?: string }) {
+export async function upsertArtist(
+  a: Omit<Artist, 'slug' | 'bio' | 'profile_image_url'> & {
+    slug?: string;
+    bio?: string;
+    profile_image_url?: string;
+  },
+) {
   const existing = await getArtist(a.user_id);
   const slug =
     a.slug ||
     (await resolveSlug(a.user_id, a.display_name, a.public_key, existing?.slug || null));
   const bio = (a.bio ?? existing?.bio ?? '').trim();
-  const row: Artist = { ...a, slug, bio };
+  const profile_image_url =
+    a.profile_image_url ?? existing?.profile_image_url ?? '';
+  const row: Artist = { ...a, slug, bio, profile_image_url };
 
   if (!useNeon()) {
     const d = readAll();
@@ -205,6 +215,7 @@ export async function upsertArtist(a: Omit<Artist, 'slug' | 'bio'> & { slug?: st
       display_name: row.display_name || null,
       slug: row.slug,
       bio: row.bio || null,
+      profile_image_url: row.profile_image_url || null,
       public_key: row.public_key,
       created_at: new Date(row.created_at),
     })
@@ -215,6 +226,7 @@ export async function upsertArtist(a: Omit<Artist, 'slug' | 'bio'> & { slug?: st
         display_name: row.display_name || null,
         slug: row.slug,
         bio: row.bio || null,
+        profile_image_url: row.profile_image_url || null,
         public_key: row.public_key,
       },
     });

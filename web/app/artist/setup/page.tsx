@@ -5,7 +5,10 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { generateKeypair, signMeta, computeCID } from '@/lib/crypto';
+import { compressAvatarFile } from '@/lib/compressAvatar';
 import { isMvpMockModeClient } from '@/lib/mockMode';
+import { AUDIO_MAX_BYTES } from '@/lib/mediaLimits';
+import Image from 'next/image';
 
 const POLICY_KEY = 'sd_policy_accepted_at';
 const PROFILE_SLUG_KEY = 'sd_profile_slug';
@@ -43,7 +46,10 @@ export default function ArtistSetupPage() {
   const [myTracks, setMyTracks] = useState<DashTrack[]>([]);
   const [savingId, setSavingId] = useState('');
   const [profileSlug, setProfileSlug] = useState(initialProfileSlug);
+  const [avatarPreview, setAvatarPreview] = useState('');
+  const [avatarBusy, setAvatarBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const avatarRef = useRef<HTMLInputElement>(null);
 
   function rememberProfileSlug(slug: string) {
     setProfileSlug(slug);
@@ -66,6 +72,9 @@ export default function ArtistSetupPage() {
       if (artist?.slug) rememberProfileSlug(artist.slug);
       if (artist?.display_name && !displayName) setDisplayName(artist.display_name);
       if (artist?.bio && !bio) setBio(artist.bio);
+      if (typeof artist?.profile_image_url === 'string' && artist.profile_image_url) {
+        setAvatarPreview(`${artist.profile_image_url}?v=${Date.now()}`);
+      }
     } catch {
       /* ignore */
     }
@@ -141,6 +150,11 @@ export default function ArtistSetupPage() {
     }
     if (f.type !== 'audio/mpeg' && !f.name.toLowerCase().endsWith('.mp3')) {
       setStatus('[ MP3 ONLY ]');
+      return;
+    }
+
+    if (f.size > AUDIO_MAX_BYTES) {
+      setStatus(`[ MP3 TOO LARGE ] Max ${Math.round(AUDIO_MAX_BYTES / (1024 * 1024))}MB`);
       return;
     }
 
@@ -229,12 +243,50 @@ export default function ArtistSetupPage() {
     }
   }
 
+  async function uploadAvatar(file: File) {
+    setAvatarBusy(true);
+    setStatus('[ COMPRESSING IMAGE… ]');
+    try {
+      await register({ quiet: true });
+      const blob = await compressAvatarFile(file);
+      const fd = new FormData();
+      fd.append('file', blob, 'avatar.jpg');
+      if (pubKey) fd.append('publicKey', pubKey);
+      setStatus('[ UPLOADING IMAGE… ]');
+      const res = await fetch('/api/artists/avatar', { method: 'POST', body: fd });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setStatus(`[ IMAGE FAILED ] ${JSON.stringify(data)}`);
+        return;
+      }
+      const url =
+        typeof data.profileImageUrl === 'string'
+          ? `${data.profileImageUrl}?v=${Date.now()}`
+          : '';
+      if (url) setAvatarPreview(url);
+      setStatus(
+        `[ IMAGE SAVED ] ${Math.round((data.bytes || blob.size) / 1024)}KB (max ~150KB)`,
+      );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'failed';
+      setStatus(`[ IMAGE FAILED ] ${msg}`);
+    } finally {
+      setAvatarBusy(false);
+      if (avatarRef.current) avatarRef.current.value = '';
+    }
+  }
+
   function handleRegisterClick() {
     void register();
   }
 
   function handleUploadClick() {
     void upload();
+  }
+
+  function handleAvatarPick(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (f) void uploadAvatar(f);
   }
 
   if (!isSignedIn && !mock) {
@@ -288,6 +340,30 @@ export default function ArtistSetupPage() {
           className="sd-input mt-3 min-h-[6.5rem] resize-y"
         />
         <p className="font-telemetry mt-2 text-[10px] text-sd-muted">{bio.length}/500</p>
+
+        <h2 className="font-telemetry mt-6 text-[11px] text-sd-muted">[ PROFILE IMAGE ]</h2>
+        <p className="mt-2 text-xs text-sd-muted">
+          Auto-compressed to ≤512px / ~100KB JPEG so free-tier storage stays small.
+        </p>
+        {avatarPreview && (
+          <div className="relative mt-3 h-28 w-28 overflow-hidden border border-sd-border">
+            <Image
+              src={avatarPreview}
+              alt="Profile"
+              fill
+              unoptimized
+              className="object-cover"
+            />
+          </div>
+        )}
+        <input
+          ref={avatarRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/*"
+          onChange={handleAvatarPick}
+          disabled={avatarBusy}
+          className="font-telemetry mt-3 block w-full text-xs text-sd-muted file:mr-4 file:border file:border-sd-border file:bg-sd-bg file:px-3 file:py-2 file:text-[10px] file:uppercase file:tracking-widest file:text-sd-text"
+        />
       </section>
 
       <section className="sd-panel mt-px border border-sd-border p-5">
