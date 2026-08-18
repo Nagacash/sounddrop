@@ -57,9 +57,12 @@ export default function ArtistSetupPage() {
   const [avatarPreview, setAvatarPreview] = useState('');
   const [avatarBusy, setAvatarBusy] = useState(false);
   const [coverPreview, setCoverPreview] = useState('');
+  const [coverSavingId, setCoverSavingId] = useState('');
+  const [trackCoverPreviews, setTrackCoverPreviews] = useState<Record<string, string>>({});
   const fileRef = useRef<HTMLInputElement>(null);
   const coverRef = useRef<HTMLInputElement>(null);
   const avatarRef = useRef<HTMLInputElement>(null);
+  const trackCoverRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   function rememberProfileSlug(slug: string) {
     setProfileSlug(slug);
@@ -279,6 +282,75 @@ export default function ArtistSetupPage() {
     } finally {
       setSavingId('');
     }
+  }
+
+  async function saveTrackCover(track: DashTrack) {
+    const input = trackCoverRefs.current[track.id];
+    const file = input?.files?.[0];
+    if (!file) {
+      setStatus('[ SELECT A COVER IMAGE FIRST ]');
+      return;
+    }
+    if (!file.type.startsWith('image/')) {
+      setStatus('[ COVER MUST BE AN IMAGE ]');
+      return;
+    }
+
+    setCoverSavingId(track.id);
+    setStatus('[ COMPRESSING COVER… ]');
+    try {
+      const blob = await compressCoverFile(file);
+      const fd = new FormData();
+      fd.append('cover', new File([blob], 'cover.jpg', { type: 'image/jpeg' }));
+      if (pubKey) fd.append('publicKey', pubKey);
+      setStatus('[ SAVING COVER… ]');
+      const res = await fetch(`/api/tracks/${encodeURIComponent(track.id)}/cover`, {
+        method: 'POST',
+        body: fd,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setStatus(`[ COVER FAILED ] ${JSON.stringify(data)}`);
+        return;
+      }
+      const url =
+        typeof data.coverUrl === 'string' ? `${data.coverUrl}?v=${Date.now()}` : '';
+      if (url) {
+        setMyTracks((prev) =>
+          prev.map((x) => (x.id === track.id ? { ...x, cover_url: url } : x)),
+        );
+        setTrackCoverPreviews((prev) => {
+          const next = { ...prev };
+          delete next[track.id];
+          return next;
+        });
+      }
+      if (input) input.value = '';
+      setStatus(`[ COVER SAVED ] ${Math.round((data.bytes || blob.size) / 1024)}KB`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'failed';
+      setStatus(`[ COVER FAILED ] ${msg}`);
+    } finally {
+      setCoverSavingId('');
+    }
+  }
+
+  function onTrackCoverPick(trackId: string, e: ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (!f) {
+      setTrackCoverPreviews((prev) => {
+        const next = { ...prev };
+        delete next[trackId];
+        return next;
+      });
+      return;
+    }
+    if (!f.type.startsWith('image/')) {
+      setStatus('[ COVER MUST BE AN IMAGE ]');
+      e.target.value = '';
+      return;
+    }
+    setTrackCoverPreviews((prev) => ({ ...prev, [trackId]: URL.createObjectURL(f) }));
   }
 
   async function deleteTrack(track: DashTrack) {
@@ -555,7 +627,8 @@ export default function ArtistSetupPage() {
           TRACK THUMBNAIL (OPTIONAL)
         </label>
         <p className="mt-1 text-xs text-sd-muted">
-          Square cover for this release — separate from your profile photo.
+          Square cover for this release. Saved together with [ SIGN & UPLOAD ]. To add art to an
+          existing track, use [ SAVE COVER ] under Your Tracks.
         </p>
         {coverPreview && (
           <div className="relative mt-3 h-24 w-24 overflow-hidden border border-sd-border">
@@ -601,20 +674,48 @@ export default function ArtistSetupPage() {
         <section className="sd-panel mt-8 border border-sd-border p-5">
           <h2 className="font-telemetry text-[11px] text-sd-muted">[ YOUR TRACKS ]</h2>
           <div className="mt-4 flex flex-col gap-6">
-            {myTracks.map((t) => (
+            {myTracks.map((t) => {
+              const coverSrc = trackCoverPreviews[t.id] || t.cover_url || '';
+              const busy =
+                savingId === t.id || deletingId === t.id || coverSavingId === t.id;
+              return (
               <div key={t.id} className="border border-sd-border p-4">
-                {t.cover_url ? (
-                  <div className="relative mb-4 h-16 w-16 overflow-hidden border border-sd-border">
+                <label className="font-telemetry text-[10px] text-sd-muted">
+                  TRACK COVER
+                </label>
+                {coverSrc ? (
+                  <div className="relative mt-2 h-20 w-20 overflow-hidden border border-sd-border">
                     <Image
-                      src={t.cover_url}
+                      src={coverSrc}
                       alt=""
                       fill
                       unoptimized
                       className="object-cover"
                     />
                   </div>
-                ) : null}
-                <label className="font-telemetry text-[10px] text-sd-muted">TITLE</label>
+                ) : (
+                  <p className="mt-2 text-xs text-sd-muted">No cover yet.</p>
+                )}
+                <input
+                  ref={(el) => {
+                    trackCoverRefs.current[t.id] = el;
+                  }}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={(e) => onTrackCoverPick(t.id, e)}
+                  className="font-telemetry mt-3 block w-full text-xs text-sd-muted file:mr-4 file:border file:border-sd-border file:bg-sd-bg file:px-3 file:py-2 file:text-[10px] file:uppercase file:tracking-widest file:text-sd-text"
+                />
+                <button
+                  type="button"
+                  disabled={busy}
+                  aria-busy={coverSavingId === t.id}
+                  onClick={() => void saveTrackCover(t)}
+                  className="sd-btn mt-3"
+                >
+                  {coverSavingId === t.id ? '[ SAVING COVER… ]' : '[ SAVE COVER ]'}
+                </button>
+
+                <label className="font-telemetry mt-5 block text-[10px] text-sd-muted">TITLE</label>
                 <input
                   value={t.title || ''}
                   onChange={(e) =>
@@ -657,7 +758,7 @@ export default function ArtistSetupPage() {
                 <div className="mt-4 flex flex-wrap gap-3">
                   <button
                     type="button"
-                    disabled={savingId === t.id || deletingId === t.id}
+                    disabled={busy}
                     aria-busy={savingId === t.id}
                     onClick={() => void saveTrack(t)}
                     className="sd-btn"
@@ -666,7 +767,7 @@ export default function ArtistSetupPage() {
                   </button>
                   <button
                     type="button"
-                    disabled={savingId === t.id || deletingId === t.id}
+                    disabled={busy}
                     aria-busy={deletingId === t.id}
                     onClick={() => void deleteTrack(t)}
                     className="sd-btn border-sd-accent text-sd-accent hover:bg-sd-accent/10"
@@ -675,7 +776,8 @@ export default function ArtistSetupPage() {
                   </button>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       )}

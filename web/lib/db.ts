@@ -408,6 +408,28 @@ export async function updateTrackMeta(
   return rows[0] ? mapTrack(rows[0]) : null;
 }
 
+export async function updateTrackCoverUrl(
+  id: string,
+  coverUrl: string,
+): Promise<Track | null> {
+  if (!useNeon()) {
+    const d = readAll();
+    const i = d.tracks.findIndex((t) => t.id === id);
+    if (i < 0) return null;
+    d.tracks[i] = { ...d.tracks[i], cover_url: coverUrl };
+    writeAll(d);
+    return d.tracks[i];
+  }
+
+  const db = getDb();
+  const rows = await db
+    .update(tracks)
+    .set({ cover_url: coverUrl })
+    .where(eq(tracks.id, id))
+    .returning();
+  return rows[0] ? mapTrack(rows[0]) : null;
+}
+
 export async function listTracksForArtist(artistId: string): Promise<Track[]> {
   const all = await listTracks({ includeRemoved: false });
   return all.filter((t) => t.artist_id === artistId);
