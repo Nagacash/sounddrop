@@ -15,6 +15,16 @@ function isMp3(file: Blob, name: string) {
   return file.type === 'audio/mpeg' || name.toLowerCase().endsWith('.mp3');
 }
 
+/** FormData File/Blob check that works across Node undici realms. */
+function isUploadBlob(value: unknown): value is Blob {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    typeof (value as Blob).arrayBuffer === 'function' &&
+    typeof (value as Blob).size === 'number'
+  );
+}
+
 export async function POST(req: NextRequest) {
   const mock = isMvpMockMode();
   let userId: string | null = null;
@@ -172,9 +182,16 @@ export async function POST(req: NextRequest) {
 
   let coverUrl: string | null = null;
   const coverField = form.get('cover');
-  if (coverField instanceof Blob && coverField.size > 0) {
-    const coverType = coverField.type || 'image/jpeg';
-    if (!COVER_MIME.has(coverType) && coverType !== 'image/jpg') {
+  if (isUploadBlob(coverField) && coverField.size > 0) {
+    const coverName = coverField instanceof File ? coverField.name : 'cover.jpg';
+    const coverType =
+      coverField.type ||
+      (coverName.toLowerCase().endsWith('.png')
+        ? 'image/png'
+        : coverName.toLowerCase().endsWith('.webp')
+          ? 'image/webp'
+          : 'image/jpeg');
+    if (!COVER_MIME.has(coverType) && !coverType.startsWith('image/')) {
       return NextResponse.json(
         { error: 'invalid_cover_type', detail: 'Cover must be JPEG, PNG, or WebP' },
         { status: 400 },
@@ -190,7 +207,11 @@ export async function POST(req: NextRequest) {
       );
     }
     try {
-      coverUrl = await storeCover(realCid, await coverField.arrayBuffer());
+      coverUrl = await storeCover(
+        realCid,
+        await coverField.arrayBuffer(),
+        coverType.startsWith('image/') ? coverType : 'image/jpeg',
+      );
     } catch (err) {
       console.error('[tracks] cover store failed', err);
       return NextResponse.json(

@@ -23,6 +23,14 @@ CREATE TABLE IF NOT EXISTS artist_avatars (
   updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS track_covers (
+  cid           TEXT PRIMARY KEY,
+  bytes         BYTEA NOT NULL,
+  content_type  TEXT NOT NULL DEFAULT 'image/jpeg',
+  byte_size     INT NOT NULL,
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS tracks (
   id            TEXT PRIMARY KEY,           -- = cid (content address)
   artist_id     TEXT NOT NULL REFERENCES artists(user_id),
@@ -34,6 +42,7 @@ CREATE TABLE IF NOT EXISTS tracks (
   signature     TEXT NOT NULL,             -- base64 Ed25519 sig over canonical meta
   public_key    TEXT NOT NULL,             -- must match artists.public_key at ingest
   storage_url   TEXT,                      -- playable URL (/api/media/{cid} or blob)
+  cover_url     TEXT,                      -- /api/covers/{cid}
   producers     TEXT,                      -- optional producer credits
   featuring     TEXT,                      -- optional featured artists
   created_at    TIMESTAMPTZ DEFAULT now(),

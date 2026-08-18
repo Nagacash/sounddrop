@@ -227,7 +227,7 @@ export default function ArtistSetupPage() {
     fd.append('producers', producers.trim());
     fd.append('featuring', featuring.trim());
     if (coverBlob) {
-      fd.append('cover', coverBlob, 'cover.jpg');
+      fd.append('cover', new File([coverBlob], 'cover.jpg', { type: 'image/jpeg' }));
     }
     const res = await fetch('/api/tracks', { method: 'POST', body: fd });
     const data = await res.json();

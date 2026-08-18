@@ -1,43 +1,71 @@
 import fs from 'fs';
 import path from 'path';
-import { createServiceClient } from '@/utils/supabase/admin';
-import { TRACK_AUDIO_BUCKET } from '@/lib/audioStorage';
+import { neon } from '@neondatabase/serverless';
+import { COVER_MAX_BYTES } from '@/lib/mediaLimits';
 
 const LOCAL_DIR = path.join(process.cwd(), 'data', 'covers');
 
-function coverObjectPath(cid: string) {
-  return `covers/${cid}.jpg`;
+function getSql() {
+  const url = process.env.DATABASE_URL;
+  if (!url) return null;
+  return neon(url);
 }
 
 function localCoverPath(cid: string) {
   return path.join(LOCAL_DIR, `${cid}.jpg`);
 }
 
-function supabaseBaseUrl(): string | null {
-  return process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || null;
+function toBuffer(value: unknown): Buffer | null {
+  if (!value) return null;
+  if (Buffer.isBuffer(value)) return value;
+  if (value instanceof Uint8Array) return Buffer.from(value);
+  if (typeof value === 'string') {
+    if (value.startsWith('\\x')) return Buffer.from(value.slice(2), 'hex');
+    try {
+      return Buffer.from(value, 'base64');
+    } catch {
+      return null;
+    }
+  }
+  return null;
 }
 
-function hasSupabaseSecret(): boolean {
-  return Boolean(supabaseBaseUrl() && process.env.SUPABASE_SECRET_KEY);
-}
-
-export function publicCoverUrl(cid: string): string | null {
-  const base = supabaseBaseUrl();
-  if (!base) return null;
-  return `${base.replace(/\/$/, '')}/storage/v1/object/public/${TRACK_AUDIO_BUCKET}/${coverObjectPath(cid)}`;
-}
-
-export function localCoverMediaUrl(cid: string) {
+export function coverMediaUrl(cid: string) {
   return `/api/covers/${encodeURIComponent(cid)}`;
 }
 
-/** Store square JPEG cover for a track CID. */
-export async function storeCover(cid: string, bytes: ArrayBuffer | Buffer): Promise<string> {
-  const buffer = Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes);
+async function ensureCoverTable() {
+  const sql = getSql();
+  if (!sql) return;
+  await sql`
+    CREATE TABLE IF NOT EXISTS track_covers (
+      cid TEXT PRIMARY KEY,
+      bytes BYTEA NOT NULL,
+      content_type TEXT NOT NULL DEFAULT 'image/jpeg',
+      byte_size INT NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `;
+}
 
-  if (!hasSupabaseSecret()) {
+/** Store square JPEG cover for a track CID. Returns a stable app URL. */
+export async function storeCover(
+  cid: string,
+  bytes: ArrayBuffer | Buffer,
+  contentType = 'image/jpeg',
+): Promise<string> {
+  const buffer = Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes);
+  if (buffer.length > COVER_MAX_BYTES) {
+    throw new Error('cover_too_large');
+  }
+  if (!contentType.startsWith('image/')) {
+    throw new Error('image_only');
+  }
+
+  const sql = getSql();
+  if (!sql) {
     if (process.env.VERCEL) {
-      throw new Error('SUPABASE_SECRET_KEY is required on Vercel to store covers');
+      throw new Error('DATABASE_URL is required to store covers');
     }
     try {
       fs.mkdirSync(/* turbopackIgnore: true */ LOCAL_DIR, { recursive: true });
@@ -45,33 +73,40 @@ export async function storeCover(cid: string, bytes: ArrayBuffer | Buffer): Prom
     } catch {
       // ignore
     }
-    return localCoverMediaUrl(cid);
+    return coverMediaUrl(cid);
   }
 
-  const supabase = createServiceClient();
-  const { error } = await supabase.storage.from(TRACK_AUDIO_BUCKET).upload(coverObjectPath(cid), buffer, {
-    contentType: 'image/jpeg',
-    upsert: true,
-    cacheControl: '31536000',
-  });
+  await ensureCoverTable();
+  const b64 = buffer.toString('base64');
+  const type = contentType.startsWith('image/') ? contentType : 'image/jpeg';
+  await sql`
+    INSERT INTO track_covers (cid, bytes, content_type, byte_size, updated_at)
+    VALUES (${cid}, decode(${b64}, 'base64'), ${type}, ${buffer.length}, now())
+    ON CONFLICT (cid) DO UPDATE
+    SET bytes = EXCLUDED.bytes,
+        content_type = EXCLUDED.content_type,
+        byte_size = EXCLUDED.byte_size,
+        updated_at = now()
+  `;
 
-  if (error) {
-    console.error('[coverStorage] upload failed', error);
-    throw new Error(`cover_upload_failed: ${error.message}`);
+  // Best-effort local cache for faster /api/covers in dev.
+  try {
+    fs.mkdirSync(/* turbopackIgnore: true */ LOCAL_DIR, { recursive: true });
+    fs.writeFileSync(/* turbopackIgnore: true */ localCoverPath(cid), buffer);
+  } catch {
+    // ignore
   }
 
-  const url = publicCoverUrl(cid);
-  if (!url) throw new Error('cover_public_url_missing');
-  return url;
+  return coverMediaUrl(cid);
 }
 
 export async function deleteCover(cid: string): Promise<void> {
-  if (hasSupabaseSecret()) {
+  const sql = getSql();
+  if (sql) {
     try {
-      const supabase = createServiceClient();
-      await supabase.storage.from(TRACK_AUDIO_BUCKET).remove([coverObjectPath(cid)]);
+      await sql`DELETE FROM track_covers WHERE cid = ${cid}`;
     } catch (err) {
-      console.warn('[coverStorage] remove failed', err);
+      console.warn('[coverStorage] neon delete failed', err);
     }
   }
   try {
@@ -82,6 +117,36 @@ export async function deleteCover(cid: string): Promise<void> {
   } catch {
     // ignore
   }
+}
+
+export async function readCover(
+  cid: string,
+): Promise<{ buffer: Buffer; contentType: string } | null> {
+  const sql = getSql();
+  if (sql) {
+    try {
+      const rows = await sql`
+        SELECT bytes, content_type FROM track_covers WHERE cid = ${cid} LIMIT 1
+      `;
+      const row = rows[0];
+      if (row) {
+        const buffer = toBuffer(row.bytes);
+        if (buffer?.length) {
+          return {
+            buffer,
+            contentType:
+              typeof row.content_type === 'string' ? row.content_type : 'image/jpeg',
+          };
+        }
+      }
+    } catch (err) {
+      console.warn('[coverStorage] neon read failed', err);
+    }
+  }
+
+  const local = readLocalCover(cid);
+  if (!local?.length) return null;
+  return { buffer: local, contentType: 'image/jpeg' };
 }
 
 export function readLocalCover(cid: string): Buffer | null {
