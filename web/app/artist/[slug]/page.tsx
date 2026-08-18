@@ -33,6 +33,7 @@ export default async function ArtistSpacePage({ params }: Props) {
         slug={artist.slug}
         publicKeyHash={artist.publicKeyHash}
         artistName={artist.displayName}
+        artworkUrl={artist.profileImageUrl}
       />
     </main>
   );

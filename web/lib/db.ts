@@ -225,8 +225,13 @@ export async function upsertArtist(
   const instagram_url = a.instagram_url ?? existing?.instagram_url ?? '';
   const bandcamp_url = a.bandcamp_url ?? existing?.bandcamp_url ?? '';
   const location = (a.location ?? existing?.location ?? '').trim().slice(0, 80);
+  const email =
+    typeof a.email === 'string' && a.email.trim()
+      ? a.email.trim()
+      : existing?.email || '';
   const row: Artist = {
     ...a,
+    email,
     slug,
     bio,
     profile_image_url,

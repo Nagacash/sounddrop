@@ -9,13 +9,16 @@ const config: Config = {
     extend: {
       colors: {
         sd: {
-          bg: '#0a0a0a',
-          surface: '#121212',
-          border: '#2a2a2a',
-          muted: '#9a9a9a',
-          text: '#eaeaea',
-          accent: '#e61919',
-          status: '#4af626',
+          bg: 'var(--sd-bg)',
+          surface: 'var(--sd-surface)',
+          'surface-hover': 'var(--sd-surface-hover)',
+          border: 'var(--sd-border)',
+          muted: 'var(--sd-muted)',
+          placeholder: 'var(--sd-placeholder)',
+          text: 'var(--sd-text)',
+          accent: 'var(--sd-accent)',
+          'accent-hot': 'var(--sd-accent-hot)',
+          status: 'var(--sd-status)',
         },
       },
       fontFamily: {

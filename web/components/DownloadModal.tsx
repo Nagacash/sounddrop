@@ -79,7 +79,7 @@ export default function DownloadModal({ track, artistName, open, onClose }: Down
           <button
             type="button"
             onClick={handleDownload}
-            className="inline-flex min-h-12 cursor-pointer items-center justify-center bg-sd-accent px-6 text-sm font-bold uppercase tracking-[0.08em] text-white transition-colors duration-200 hover:bg-[#ff2a2a]"
+            className="inline-flex min-h-12 cursor-pointer items-center justify-center bg-sd-accent px-6 text-sm font-bold uppercase tracking-[0.08em] text-white transition-colors duration-200 hover:bg-sd-accent-hot"
           >
             {paid ? 'Download' : 'Download free'}
           </button>

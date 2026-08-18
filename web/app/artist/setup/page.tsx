@@ -579,6 +579,7 @@ export default function ArtistSetupPage() {
                   <button
                     type="button"
                     disabled={savingId === t.id || deletingId === t.id}
+                    aria-busy={savingId === t.id}
                     onClick={() => void saveTrack(t)}
                     className="sd-btn"
                   >
@@ -587,6 +588,7 @@ export default function ArtistSetupPage() {
                   <button
                     type="button"
                     disabled={savingId === t.id || deletingId === t.id}
+                    aria-busy={deletingId === t.id}
                     onClick={() => void deleteTrack(t)}
                     className="sd-btn border-sd-accent text-sd-accent hover:bg-sd-accent/10"
                   >

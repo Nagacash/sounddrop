@@ -30,7 +30,7 @@ export default function AppHeader({ mock }: { mock: boolean }) {
   }
 
   return (
-    <header className="sticky top-0 z-header border-b border-sd-border bg-sd-bg">
+    <header className="sticky top-0 z-header border-b border-sd-border bg-sd-bg/95 backdrop-blur-sm">
       <div className="mx-auto flex max-w-6xl flex-wrap items-stretch gap-0">
         <Link
           href="/"
@@ -38,17 +38,17 @@ export default function AppHeader({ mock }: { mock: boolean }) {
         >
           SOUNDDROP
         </Link>
-        <nav className="font-telemetry flex flex-1 flex-wrap items-center gap-1 px-2 text-[11px] text-sd-muted sm:gap-0">
+        <nav className="font-telemetry flex flex-1 flex-wrap items-center gap-1 px-2 text-xs text-sd-muted sm:gap-0">
           <Link
             href="/"
-            className="px-3 py-3 transition-colors duration-fast ease-out hover:text-sd-text"
+            className="px-3 py-3.5 transition-colors duration-fast ease-out hover:text-sd-text"
           >
             [ DISCOVER ]
           </Link>
           {mock ? (
             <Link
               href="/artist/setup"
-              className="px-3 py-3 transition-colors duration-fast ease-out hover:text-sd-text"
+              className="px-3 py-3.5 transition-colors duration-fast ease-out hover:text-sd-text"
             >
               [ DASHBOARD ]
             </Link>
@@ -56,7 +56,7 @@ export default function AppHeader({ mock }: { mock: boolean }) {
             <Show when="signed-in">
               <Link
                 href="/artist/setup"
-                className="px-3 py-3 transition-colors duration-fast ease-out hover:text-sd-text"
+                className="px-3 py-3.5 transition-colors duration-fast ease-out hover:text-sd-text"
               >
                 [ DASHBOARD ]
               </Link>
@@ -64,7 +64,7 @@ export default function AppHeader({ mock }: { mock: boolean }) {
           )}
           <Link
             href="/policy/content-responsibility"
-            className="px-3 py-3 transition-colors duration-fast ease-out hover:text-sd-text"
+            className="px-3 py-3.5 transition-colors duration-fast ease-out hover:text-sd-text"
           >
             [ POLICY ]
           </Link>

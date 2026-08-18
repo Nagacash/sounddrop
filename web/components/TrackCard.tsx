@@ -28,11 +28,11 @@ export default function TrackCard({ track, publicKeyHash, artistName }: TrackCar
         <div className="mb-2 flex items-start justify-between gap-2">
           <div className="min-w-0">
             <h3 className="font-display truncate text-lg text-sd-text">{track.title}</h3>
-            <p className="font-telemetry mt-1 truncate text-[10px] text-sd-muted">{artistName}</p>
+            <p className="font-telemetry mt-1 truncate text-xs text-sd-muted">{artistName}</p>
           </div>
           {track.verified && <span className="sd-badge-verified shrink-0">VERIFIED</span>}
         </div>
-        <p className="font-telemetry text-[10px] text-sd-muted">
+        <p className="font-telemetry text-xs text-sd-muted">
           {formatTime(track.duration)} · {playing ? 'PLAYING' : 'TAP TO PLAY'}
         </p>
       </button>
@@ -47,7 +47,7 @@ export default function TrackCard({ track, publicKeyHash, artistName }: TrackCar
         <button
           type="button"
           onClick={() => setDownloadOpen(true)}
-          className="font-telemetry min-h-9 cursor-pointer text-[10px] text-sd-muted transition-colors duration-fast hover:text-sd-accent"
+          className="font-telemetry inline-flex min-h-11 cursor-pointer items-center text-xs text-sd-muted transition-colors duration-fast hover:text-sd-accent"
         >
           {track.isFree ? 'Download' : `Download from ${formatPriceCents(track.minPriceCents ?? 0)}`}
         </button>

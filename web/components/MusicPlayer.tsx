@@ -29,7 +29,7 @@ export default function MusicPlayer({ track, artistName, publicKeyHash }: MusicP
         <button
           type="button"
           onClick={() => playTrack({ ...track, artistName, publicKeyHash })}
-          className="inline-flex min-h-12 cursor-pointer items-center justify-center gap-2 bg-sd-accent px-6 text-sm font-bold uppercase tracking-[0.08em] text-white transition-colors duration-200 hover:bg-[#ff2a2a]"
+          className="inline-flex min-h-12 cursor-pointer items-center justify-center gap-2 bg-sd-accent px-6 text-sm font-bold uppercase tracking-[0.08em] text-white transition-colors duration-200 hover:bg-sd-accent-hot"
         >
           {playing ? 'Pause' : 'Play'}
         </button>

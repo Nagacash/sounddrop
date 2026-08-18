@@ -156,7 +156,7 @@ export default function ArtistProfile({ artist }: ArtistProfileProps) {
                     publicKeyHash: artist.publicKeyHash,
                   })
                 }
-                className="inline-flex min-h-12 min-w-12 cursor-pointer items-center justify-center gap-2 bg-sd-accent px-7 text-sm font-bold uppercase tracking-[0.08em] text-white transition-colors duration-200 hover:bg-[#ff2a2a] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sd-accent"
+                  className="inline-flex min-h-12 min-w-12 cursor-pointer items-center justify-center gap-2 bg-sd-accent px-7 text-sm font-bold uppercase tracking-[0.08em] text-white transition-colors duration-fast ease-out hover:bg-sd-accent-hot focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sd-accent"
                 aria-label={playingFirst ? 'Pause' : 'Play'}
               >
                 {playingFirst ? <PauseIcon /> : <PlayIcon />}

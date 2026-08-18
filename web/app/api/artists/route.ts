@@ -5,10 +5,12 @@ import { upsertArtist, getArtist, listTracksForArtist } from '@/lib/db';
 import { isMvpMockMode } from '@/lib/mockMode';
 import { hashPublicKey } from '@/lib/publicKeyHash';
 import { normalizeProfileUrl } from '@/lib/profileLinks';
+import { takeRateLimit } from '@/lib/rateLimit';
 
 export async function POST(req: NextRequest) {
   const mock = isMvpMockMode();
   let userId: string | null = null;
+  let clerkEmail = '';
 
   if (!mock) {
     const authResult = await auth();
@@ -20,7 +22,17 @@ export async function POST(req: NextRequest) {
       if (me.banned) {
         return NextResponse.json({ error: 'account_banned', code: 'ACCOUNT_BANNED' }, { status: 403 });
       }
+      clerkEmail = me.emailAddresses[0]?.emailAddress || '';
     }
+  }
+
+  const rateKey = `artists:post:${userId || req.headers.get('x-forwarded-for') || 'anon'}`;
+  const limited = takeRateLimit(rateKey, { limit: 30, windowMs: 60 * 60 * 1000 });
+  if (!limited.ok) {
+    return NextResponse.json(
+      { error: 'rate_limited', retryAfterSec: limited.retryAfterSec },
+      { status: 429, headers: { 'Retry-After': String(limited.retryAfterSec) } },
+    );
   }
 
   const body = await req.json().catch(() => ({}));
@@ -58,7 +70,8 @@ export async function POST(req: NextRequest) {
 
   const artist = await upsertArtist({
     user_id: resolvedUserId,
-    email: body.email || '',
+    // Never trust client email — bind from Clerk when available.
+    email: clerkEmail || (mock ? '' : ''),
     display_name: body.displayName || '',
     bio,
     website_url,

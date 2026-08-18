@@ -8,6 +8,7 @@ import { storeAudio } from '@/lib/audioStorage';
 import { isMvpMockMode } from '@/lib/mockMode';
 import { hashPublicKey } from '@/lib/publicKeyHash';
 import { AUDIO_MAX_BYTES } from '@/lib/mediaLimits';
+import { takeRateLimit } from '@/lib/rateLimit';
 
 function isMp3(file: Blob, name: string) {
   return file.type === 'audio/mpeg' || name.toLowerCase().endsWith('.mp3');
@@ -31,6 +32,15 @@ export async function POST(req: NextRequest) {
         );
       }
     }
+  }
+
+  const rateKey = `tracks:post:${userId || req.headers.get('x-forwarded-for') || 'anon'}`;
+  const limited = takeRateLimit(rateKey, { limit: 10, windowMs: 60 * 60 * 1000 });
+  if (!limited.ok) {
+    return NextResponse.json(
+      { error: 'rate_limited', retryAfterSec: limited.retryAfterSec },
+      { status: 429, headers: { 'Retry-After': String(limited.retryAfterSec) } },
+    );
   }
 
   const form = await req.formData();
@@ -194,7 +204,20 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET() {
-  // Public catalog omits admin-removed tracks.
+  // Public catalog — omit signing material and internal ownership fields.
   const tracks = await listTracks({ includeRemoved: false });
-  return NextResponse.json({ tracks });
+  return NextResponse.json({
+    tracks: tracks.map((t) => ({
+      id: t.id,
+      title: t.title,
+      name: t.name,
+      size: t.size,
+      type: t.type,
+      cid: t.cid,
+      storage_url: t.storage_url,
+      producers: t.producers,
+      featuring: t.featuring,
+      created_at: t.created_at,
+    })),
+  });
 }

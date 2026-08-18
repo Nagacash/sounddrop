@@ -5,6 +5,7 @@ import { storeArtistAvatar } from '@/lib/avatarStorage';
 import { isMvpMockMode } from '@/lib/mockMode';
 import { hashPublicKey } from '@/lib/publicKeyHash';
 import { AVATAR_MAX_BYTES, AVATAR_MIME } from '@/lib/mediaLimits';
+import { takeRateLimit } from '@/lib/rateLimit';
 
 export async function POST(req: NextRequest) {
   const mock = isMvpMockMode();
@@ -30,6 +31,17 @@ export async function POST(req: NextRequest) {
     } catch {
       return NextResponse.json({ error: 'invalid publicKey' }, { status: 400 });
     }
+  }
+
+  const limited = takeRateLimit(`avatar:post:${userId}`, {
+    limit: 20,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!limited.ok) {
+    return NextResponse.json(
+      { error: 'rate_limited', retryAfterSec: limited.retryAfterSec },
+      { status: 429, headers: { 'Retry-After': String(limited.retryAfterSec) } },
+    );
   }
 
   const artist = await getArtist(userId!);
